@@ -1,0 +1,610 @@
+/*Project.workspace='/my_root';
+function Project(){}
+var workspace = Project.workspace;
+window.workspace = Project.workspace;*/
+function getJobLocation(){
+    var currentLocation = "", i = 0;
+    var exp = window.location.pathname.split("/");
+    var temp = Project.workspace.split("/");
+    foreach(exp,function(item){
+        if(i===temp.length){
+            currentLocation +=item;
+        }else if(i>temp.length){
+            currentLocation += "/"+item;
+        }
+        i++;
+    });
+    return currentLocation;
+}
+function isset(object){
+    if(object!==undefined){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+function isnull(object){
+    if(object === null) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function isempty(object){
+    if(object===""){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+function isFunction(functionToCheck) {
+ var getType = {};
+ return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+}
+
+function create(tag){
+    return document.createElement(tag);
+}
+
+function Box(tag, $function) {
+    this.e = document.createElement(tag);
+    this.add = function (other) {
+        if (other instanceof Box) {
+            this.e.appendChild(other.e);
+        } else {
+            this.e.appendChild(other);
+        }
+    };
+    this.find=function(){
+        return this.e;
+    };
+    if(isset($function)){
+        ($function)(this.e);
+    }
+}
+
+
+
+
+function HttpEvent(uri,success, other) {
+    $this = this;
+    this.other = other; //other stuff such as listeners, ecc (check ajax progress listener below for that regard)
+    this.success = (success ? success : function () {});
+    this.data = {phj_class: null,
+        phj_procedure: null,
+        phj_constructor: null,
+        phj_xargs: null};
+    var url = Project.workspace+uri;
+    var type = 'GET'; //default transmission method
+    var dataType = 'text/plain';
+    var contentType = 'application/json charset=utf-8';
+
+    this.setClass = function (className, constructor) {
+        this.data.phj_class = className; //class name (is not equal to url, check setLocalClass for that regard)
+        if (constructor) {
+            this.data.phj_constructor = JSON.stringify(constructor);
+        }
+    };
+
+    this.setProcedure = function (procedureName, xargs) {
+        this.data.phj_procedure = procedureName; //method name
+        if (xargs) {//method arguments, this is a normal array, mean to be treated as such (NOT JSON)
+            this.data.phj_xargs = JSON.stringify(xargs);
+        }
+    };
+
+    this.setUrl = function (value) {
+        url = value;
+    };
+
+    this.setLocalClass=function(value,constructor){
+        //automatically find local path for requested Job file
+        $this.setUrl(workspace+"/src/Job/"+value+".php");
+        $this.setClass(value,constructor);
+    };
+
+    this.setType = function (value) { //package header: Content-Type (text/plain is default)
+        //note: default value is set above
+        type = value;
+    };
+
+    this.setDataType = function (value) {
+        dataType = value;
+    };
+
+    this.setContentType = function (value) {
+        contentType = value;
+    };
+
+    this.getUrl = function () {
+        return url;
+    };
+
+    this.getType = function () {
+        return type;
+    }, this.getMethod = this.getType;
+
+    this.getDataType = function () {
+        return dataType;
+    };
+
+    this.getContentType = function () {
+        return contentType;
+    };
+    this.run = function () {
+        /*console.log(this.data.phj_class);
+         console.log(this.data.phj_procedure);*/
+
+        var formdata = new FormData();  //new storage for properly formatted json array/object to flush
+        for (var key in this.data) {
+            formdata.append(key, this.data[key]);
+        }
+
+        var ajax = new XMLHttpRequest();
+        //set events here
+
+
+        if ($this.other) {
+            for (var key in $this.other) {
+
+            	switch(key){
+            	/**************DOWNLOAD******************/
+                    case "downloadProgress":
+                        ajax.addEventListener('progress', function (event) {
+                            (other[key])(event);
+                        }, false);
+                    break;
+                    case "downloadComplete":
+                        ajax.addEventListener('load', function (event) {
+                            (other[key])(event);
+                        }, false);
+                        break;
+                    case "downloadError":
+                        ajax.addEventListener('error', function (event) {
+                            (other[key])(event);
+                        }, false);
+                        break;
+                    case "downloadAbort":
+                        ajax.addEventListener('abort', function (event) {
+                            (other[key])(event);
+                        }, false);
+                        break;
+            	/*****************UPLOAD***********************/
+                    case "uploadProgress":
+                        ajax.upload.addEventListener('progress', function (event) {
+                            (other[key])(event);
+                        }, false);
+                        break;
+                    case "uploadComplete":
+                        ajax.upload.addEventListener('load', function (event) {
+                            (other[key])(event);
+                        }, false);
+                        break;
+                    case "uploadError":
+                        ajax.upload.addEventListener('error', function (event) {
+                            (other[key])(event);
+                        }, false);
+                        break;
+                    case "uploadAbort":
+                        ajax.upload.addEventListener('abort', function (event) {
+                            (other[key])(event);
+                        }, false);
+                        break;
+
+            	}
+
+            }
+        }
+        ajax.onreadystatechange = function () { //whenever state changes
+            if (this.readyState === 4 && this.status === 200){ //onready state run
+                (success)(ajax.responseText);
+            }
+        };
+
+        ajax.open(this.getMethod(), this.getUrl(),true);
+        ajax.send(formdata); //run
+    };
+}
+
+var Job = HttpEvent;
+
+function applyHtml(target,data){
+    //pushing data to the target
+    //NOTE: just pushing html text into an element won't execute
+    //the scripting inside the data, it will just print it as plain
+    //text and ignore it. The parsing is being done below inside the foreach cycle.
+    target.innerHTML = data;
+    //temporary parent element
+    //I'm using this to throw in the result data
+    //and parse it as child nodes.
+    var temp = document.createElement("div");
+        temp.innerHTML = data;
+    var elements = temp.childNodes;
+    foreach(elements,function(item){ //iterating through each tag
+        //if this current element has an "id" attribute set to something...
+        if(isset(item.id)){
+            //...save element on the window object
+            //I'm not directly saving "item" into window because the node
+            //doesn't exist inside the dom at this point,
+            //I need to find the element after it's been created.
+            //"R.id()" will do this for me.
+            window[item.id] = R.id(item.id);
+        }
+        //find <script>
+        if(item.tagName === "SCRIPT"){
+            //parse <script> contents as javascript code
+            eval(item.innerHTML);
+        }
+    });
+}
+
+fx.i = 0;
+fx.delay = 0;
+fx.before = function () {};
+fx.after = function () {};
+fx.target = document.getElementById("main-content");
+function fx(focus, onready, target) {
+    var $this=this;
+    if (!isset(target)) {
+        this.target = fx.target;
+    }else{
+	this.target = target;
+    }
+    (fx.before)(this.target);
+
+    var j = new HttpEvent("/@"+focus,function(r){
+    	setTimeout(function(){
+            applyHtml($this.target,r);
+            (fx.after)($this.target);
+        },fx.delay);
+
+    });
+
+    j.run();
+}
+
+function go(link, onready, target) {
+	//modifying client url,
+    //this is absolutelly not required, it just refreshes the client's
+    //url in order to let them know their location or be able to copy it
+    history.pushState(null, document.title, Project.workspace + '/' + link);
+	//writes new content (with some flashy animation)
+    fx(link, onready, target);
+	//saves new location
+    window.JobLocation=link;
+}
+
+function forevery(array, $function, counter, from, to) {
+    var i;
+    var isLast = false;
+    for (i = (from ? from : 0); i < (to ? to : array.length); i += counter) {
+        isLast=!(i+1 < (to ? to : array.length));
+        $function(array[i],i,isLast);
+    }
+}
+
+function foreach(array, $function, from, to) {
+    forevery(array, $function, 1, from, to);
+}
+
+function foreachr(array, $function) {
+    var i;
+    for (i = array.length - 1; i >= 0; i--) {
+        var element = array[i];
+        $function(element);
+    }
+}
+
+function notify(message) {
+    // Let's check if the browser supports notifications
+    if (!("Notification" in window)) {
+        alert("This browser does not support desktop notification");
+    }
+
+    // Let's check whether notification permissions have already been granted
+    else if (Notification.permission === "granted") {
+        // If it's okay let's create a notification
+        var notification = new Notification(message);
+    }
+
+    // Otherwise, we need to ask the user for permission
+    else if (Notification.permission !== 'denied') {
+        Notification.requestPermission(function (permission) {
+            // If the user accepts, let's create a notification
+            if (permission === "granted") {
+                var notification = new Notification(message);
+            }
+        });
+    }
+    // At last, if the user has denied notifications, and you
+    // want to be respectful there is no need to bother them any more.
+}
+
+window.onpopstate = function () {
+    JobLocation = getJobLocation();
+    fx(JobLocation);
+};
+Mouse.wheelIsMoving = false;
+Mouse.wheel = 0;
+Mouse.leftButtonDown = false;
+Mouse.rightButtonDown = false;
+Mouse.leftButtonDownX = null;
+Mouse.leftButtonDownY = null;
+
+(function wheelListener(){
+    Mouse.wheelIsMoving = false;
+    setTimeout(function(){
+        wheelListener();
+    },10);
+})();
+
+document.onwheel=function(event){
+    Mouse.wheelIsMoving = true;
+    Mouse.wheel = event;
+};
+
+document.body.onmousedown = function (event) {
+    e = event || window.event;
+    switch (e.which) {
+        case 1:
+            Mouse.leftButtonDown = true;
+            Mouse.leftButtonDownX = Mouse.position.x;
+            Mouse.leftButtonDownY = Mouse.position.y;
+            break;
+        case 2:
+
+            break;
+        case 3:
+            Mouse.rightButtonDown = true;
+            break;
+        default:
+
+            break;
+    }
+};
+
+document.body.onmouseup = function (event) {
+    e = event || window.event;
+    switch (e.which) {
+        case 1:
+            Mouse.leftButtonDown = false;
+            Mouse.leftButtonDownX = null;
+            Mouse.leftButtonDownY = null;
+            break;
+        case 2:
+
+            break;
+        case 3:
+            Mouse.rightButtonDown = false;
+            break;
+        default:
+
+            break;
+    }
+};
+
+Mouse.position = {x: null, y: null};
+(function () {   //updating mouse position every 10ms
+    document.onmousemove = handleMouseMove;
+    (function poll() {
+        setTimeout(function () {
+            getMousePosition();
+            poll();
+        }, 10);
+    })();
+
+    function handleMouseMove(event) {
+        var dot, eventDoc, doc, body, pageX, pageY;
+
+        event = event || window.event; // IE-ism
+
+        // If pageX/Y aren't available and clientX/Y are,
+        // calculate pageX/Y - logic taken from jQuery.
+        // (This is to support old IE)
+        if (event.pageX == null && event.clientX != null) {
+            eventDoc = (event.target && event.target.ownerDocument) || document;
+            doc = eventDoc.documentElement;
+            body = eventDoc.body;
+
+            event.pageX = event.clientX +
+                    (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+                    (doc && doc.clientLeft || body && body.clientLeft || 0);
+            event.pageY = event.clientY +
+                    (doc && doc.scrollTop || body && body.scrollTop || 0) -
+                    (doc && doc.clientTop || body && body.clientTop || 0);
+        }
+
+        Mouse.position = {
+            x: event.pageX,
+            y: event.pageY
+        };
+    }
+    function getMousePosition() {
+        pos = Mouse.position;
+        if (!pos) {
+            // We haven't seen any movement yet
+        } else {
+            // Use pos.x and pos.y
+            return pos;
+        }
+    }
+})();
+function Mouse() {}
+
+Keyboard={
+    q: false, w: false, e: false, r: false, t: false, y: false, u: false, i: false, o: false, p: false,
+    a: false, s: false, d: false, f: false, g: false, h: false, j: false, k: false, l: false,
+    z: false, x: false, c: false, v: false, b: false, n: false, m: false,
+    ctrl: false, alt: false, shift: false, space: false, tab: false,
+    1: false, 2: false, 3: false, 4: false, 5: false, 6: false, 7: false, 8: false, 9: false, 0: false,
+    questionMark: false, equal: false, exclamation: false, quotes: false, quote: false, pound: false, dolar:false, euro: false,
+    percent: false, ampersand: false, fSlash: false, bSlash: false, leftParenthesis: false, rightParenthesis: false,
+    leftBracket: false, rightBracket: false, circumflex: false, leftBrace: false, rightBrace: false,
+    at: false, dot: false, comma: false, semicolon: false, hyphen: false, underscore: false, colon: false,
+    esc: false, minus: false, plus: false, star:false, enter: false, del: false, ins: false, end: false,
+    home: false, pageUp: false, pageDown: false, backspace: false, arrowLeft: false, arrowRight: false,
+    arrowUp: false, arrowDown: false, super: false, meta: false,
+    f1: false, f2: false, f3: false, f4: false, f5: false, f6: false, f7: false, f8: false,
+    f9: false, f10: false, f11: false, f12: false
+};
+
+function Keyboard() {};
+
+function wait(bool,f){
+    (function poll(){
+        setTimeout(function(){
+            if(bool){
+                (f)();
+            }else{
+                poll();
+            }
+        },1);
+    })();
+}
+
+Array.prototype.clean = function(deleteValue) {
+  for (var i = 0; i < this.length; i++) {
+    if (this[i] == deleteValue) {
+      this.splice(i, 1);
+      i--;
+    }
+  }
+  return this;
+};
+
+var getElementOffset = function(element) {
+    var top = 0, left = 0;
+    do {
+        top += element.offsetTop  || 0;
+        left += element.offsetLeft || 0;
+        element = element.offsetParent;
+    } while(element);
+
+    return {
+        x: left,
+        y: top
+    };
+};
+
+
+function Thread(f,t){
+  this.run=function(){
+    setTimeout(f,t);
+  };
+}
+
+
+function getInputCursorPos(input) {
+  if ("selectionStart" in input && document.activeElement == input) {
+    return {
+      start: input.selectionStart,
+      end: input.selectionEnd
+    };
+  }
+  else if (input.createTextRange) {
+    var sel = document.selection.createRange();
+    if (sel.parentElement() === input) {
+      var rng = input.createTextRange();
+      rng.moveToBookmark(sel.getBookmark());
+      for (var len = 0;
+      rng.compareEndPoints("EndToStart", rng) > 0;
+      rng.moveEnd("character", -1)) {
+        len++;
+      }
+      rng.setEndPoint("StartToStart", input.createTextRange());
+      for (var pos = { start: 0, end: len };
+      rng.compareEndPoints("EndToStart", rng) > 0;
+      rng.moveEnd("character", -1)) {
+        pos.start++;
+        pos.end++;
+      }
+      return pos;
+    }
+  }
+  return -1;
+}
+
+
+function getEditableCursorPos(editableDiv) {
+  var caretPos = 0,
+    sel, range;
+  if (window.getSelection) {
+    sel = window.getSelection();
+    if (sel.rangeCount) {
+      range = sel.getRangeAt(0);
+      if (range.commonAncestorContainer.parentNode == editableDiv) {
+        caretPos = range.endOffset;
+      }
+    }
+  } else if (document.selection && document.selection.createRange) {
+    range = document.selection.createRange();
+    if (range.parentElement() == editableDiv) {
+      var tempEl = document.createElement("span");
+      editableDiv.insertBefore(tempEl, editableDiv.firstChild);
+      var tempRange = range.duplicate();
+      tempRange.moveToElementText(tempEl);
+      tempRange.setEndPoint("EndToEnd", range);
+      caretPos = tempRange.text.length;
+    }
+  }
+  return caretPos;
+}
+
+
+String.prototype.splice = function(start, delCount, newSubStr) {
+    return this.slice(0, start) + newSubStr + this.slice(start + Math.abs(delCount));
+};
+
+
+function selectText(container) {
+    if (document.selection) {
+        var range = document.body.createTextRange();
+        range.moveToElementText(container);
+        range.select();
+    } else if (window.getSelection) {
+        var range = document.createRange();
+        range.selectNode(container);
+        window.getSelection().addRange(range);
+    }
+}
+
+Element.prototype.remove=function(){
+    this.oldParent = this.parentElement;
+    this.parentElement.removeChild(this);
+};
+Element.prototype.restore=function(){
+    this.oldParent.appendChild(this);
+};
+
+Element.prototype.toggleDisplay=function(){
+    if(this.style.display!=="none"){
+        if(isset(this.style.display) && this.style.display !== ""){
+            this.oldDisplay=this.style.display;
+        }else{
+            this.oldDisplay="block";
+        }
+        
+        this.style.display="none";
+    }else{
+        this.style.display=this.oldDisplay;
+    }
+};
+
+
+Number.prototype.truncate=function(places){
+    return Math.trunc(this * Math.pow(10, places)) / Math.pow(10, places);
+};
+
+function base64ToVideoBlob(string){
+    var byteCharacters = atob(string);
+    var byteNumbers = new Array(byteCharacters.length);
+    for (var i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+
+    var byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], {type: 'video/webm'});
+}
