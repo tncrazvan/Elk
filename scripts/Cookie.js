@@ -1,4 +1,4 @@
-/* 
+/*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
@@ -24,6 +24,7 @@ function Cookie(key, value, path, domain, expire){
                 :'')
                 ,e=>{
             delete window.COOKIE[path+key];
+            window.COOKIE[path+key]=value;
             if(isset(f))
                 (f)();
         });
@@ -38,8 +39,10 @@ function Cookie(key, value, path, domain, expire){
         var e = new HttpEvent(controllerGet+key,e=>{
             if(isset(f))
                 (f)(JSON.parse(e));
-            else
+            else{
+                console.log(e);
                 window.COOKIE[path+key]=JSON.parse(e);
+            }
         });
         e.run();
     };
