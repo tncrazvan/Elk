@@ -8,7 +8,7 @@ function MainActivity(){
     MainActivity.counter++;
     (function MainActivity(){
         if(getJobLocation()===""){
-          go("Home/main");
+          go(Project.defaultController);
         }else{
           go(getJobLocation());
         }
