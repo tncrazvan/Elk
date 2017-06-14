@@ -24,7 +24,10 @@ function Cookie(key, value, path, domain, expire){
                 :'')
                 ,e=>{
             delete window.COOKIE[path+key];
-            window.COOKIE[path+key]=value;
+            window.COOKIE[path+key]={
+              "DataType":"Cookie",
+              "Value":value
+            };
             if(isset(f))
                 (f)();
         });
