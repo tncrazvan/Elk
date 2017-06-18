@@ -327,24 +327,6 @@ window.onpopstate = function () {
     JobLocation = getJobLocation();
     fx(JobLocation);
 };
-Mouse.wheelIsMoving = false;
-Mouse.wheel = 0;
-Mouse.leftButtonDown = false;
-Mouse.rightButtonDown = false;
-Mouse.leftButtonDownX = null;
-Mouse.leftButtonDownY = null;
-
-(function wheelListener(){
-    Mouse.wheelIsMoving = false;
-    setTimeout(function(){
-        wheelListener();
-    },10);
-})();
-
-document.onwheel=function(event){
-    Mouse.wheelIsMoving = true;
-    Mouse.wheel = event;
-};
 
 document.body.onmousedown = function (event) {
     e = event || window.event;
@@ -586,11 +568,14 @@ Element.prototype.toggleDisplay=function(){
         }else{
             this.oldDisplay="block";
         }
-        
+
         this.style.display="none";
     }else{
         this.style.display=this.oldDisplay;
     }
+};
+Element.prototype.applyHtml=function(data){
+  applyHtml(this,data);
 };
 
 
@@ -608,3 +593,10 @@ function base64ToVideoBlob(string){
     var byteArray = new Uint8Array(byteNumbers);
     return new Blob([byteArray], {type: 'video/webm'});
 }
+
+String.prototype.btoa = function() {
+    return btoa(unescape(encodeURIComponent(this)));
+};
+String.prototype.atob = function() {
+    return decodeURIComponent(escape(atob(this)));
+};
