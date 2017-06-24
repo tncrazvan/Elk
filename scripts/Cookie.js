@@ -22,7 +22,7 @@ function Cookie(key, value, path, domain, expire){
                         :'')
                     :'')
                 :'')
-                ,e=>{
+                ,result=>{
             delete window.COOKIE[path+key];
             window.COOKIE[path+key]={
               "DataType":"Cookie",
@@ -34,16 +34,18 @@ function Cookie(key, value, path, domain, expire){
         e.run();
     };
     this.unset=function(f){
-        expire="Thu, 01 Jan 1970 00:00:00 GMT";
-        $this.set(f);
-        expire="";
+        var e = new HttpEvent(controllerUnset+key,result=>{
+            delete window.COOKIE[path+key];
+            if(isset(f))
+                (f)();
+        });
+        e.run();
     };
     this.get=function(f){
         var e = new HttpEvent(controllerGet+key,e=>{
             if(isset(f))
                 (f)(JSON.parse(e));
             else{
-                console.log(e);
                 window.COOKIE[path+key]=JSON.parse(e);
             }
         });
