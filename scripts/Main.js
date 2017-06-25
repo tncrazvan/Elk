@@ -69,47 +69,21 @@ function Box(tag, $function) {
 
 
 
-function HttpEvent(uri,success, other) {
+function HttpEvent(uri,success, other, type, data) {
     $this = this;
     this.other = other; //other stuff such as listeners, ecc (check ajax progress listener below for that regard)
     this.success = (success ? success : function () {});
-    this.data = {phj_class: null,
-        phj_procedure: null,
-        phj_constructor: null,
-        phj_xargs: null};
+
     var url = Project.workspace+uri;
-    var type = 'GET'; //default transmission method
+    var type = isset(type)?type:'GET'; //default transmission method
     var dataType = 'text/plain';
     var contentType = 'application/json charset=utf-8';
 
-    this.setClass = function (className, constructor) {
-        this.data.phj_class = className; //class name (is not equal to url, check setLocalClass for that regard)
-        if (constructor) {
-            this.data.phj_constructor = JSON.stringify(constructor);
-        }
-    };
-
-    this.setProcedure = function (procedureName, xargs) {
-        this.data.phj_procedure = procedureName; //method name
-        if (xargs) {//method arguments, this is a normal array, mean to be treated as such (NOT JSON)
-            this.data.phj_xargs = JSON.stringify(xargs);
-        }
-    };
 
     this.setUrl = function (value) {
         url = value;
     };
 
-    this.setLocalClass=function(value,constructor){
-        //automatically find local path for requested Job file
-        $this.setUrl(workspace+"/src/Job/"+value+".php");
-        $this.setClass(value,constructor);
-    };
-
-    this.setType = function (value) { //package header: Content-Type (text/plain is default)
-        //note: default value is set above
-        type = value;
-    };
 
     this.setDataType = function (value) {
         dataType = value;
@@ -135,12 +109,10 @@ function HttpEvent(uri,success, other) {
         return contentType;
     };
     this.run = function () {
-        /*console.log(this.data.phj_class);
-         console.log(this.data.phj_procedure);*/
 
         var formdata = new FormData();  //new storage for properly formatted json array/object to flush
-        for (var key in this.data) {
-            formdata.append(key, this.data[key]);
+        for (var key in data) {
+            formdata.append(key, data[key].btoa());
         }
 
         var ajax = new XMLHttpRequest();
@@ -251,7 +223,7 @@ function fx(focus, onready, target) {
     if (!isset(target)) {
         this.target = fx.target;
     }else{
-	this.target = target;
+	     this.target = target;
     }
     (fx.before)(this.target);
 
@@ -327,7 +299,10 @@ window.onpopstate = function () {
     JobLocation = getJobLocation();
     fx(JobLocation);
 };
-
+Mouse.leftButtonDown = false;
+Mouse.rightButtonDown = false;
+Mouse.leftButtonDownX = null;
+Mouse.leftButtonDownZ = null;
 document.body.onmousedown = function (event) {
     e = event || window.event;
     switch (e.which) {
