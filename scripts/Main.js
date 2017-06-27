@@ -69,6 +69,10 @@ function Box(tag, $function) {
 
 
 
+function PostHttpEvent(uri,success,data,other){
+  return new HttpEvent(uri,success,other,"POST",data);
+}
+
 function HttpEvent(uri,success, other, type, data) {
     $this = this;
     this.other = other; //other stuff such as listeners, ecc (check ajax progress listener below for that regard)
