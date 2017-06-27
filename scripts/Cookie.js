@@ -13,16 +13,22 @@ function Cookie(key, value, path, domain, expire){
     key =isset(key)?"/"+key:"/?";
     path =isset(path)?path:"";
     domain =isset(domain)?domain:document.location.hostname;
+    /*
+    IMPORTANT: reading cookies and unsetting cookies is done using the GET method of HTTP,
+    however, in order to set the value of a (new or old) cookie the POST method is used instead.
+    Using the POST method the cookie's length is not limied and it is not sent in clear, eg:
+    setting a password for an account should not be visible anywhere on your browser, but that is not the case with GET requests,
+    as browsers often display the URL of every GET request in some way (on the javascript console or on the address bar).
+    */
     this.set=function(f){
-        var e = new HttpEvent(controllerSet+key
-                +(isset(value)?"/"+value
-                    +(isset(path)?"/"+path
-                        +(isset(domain)?"/"+domain
-                            +(isset(expire)?"/"+expire:'')
-                        :'')
-                    :'')
-                :'')
-                ,result=>{
+        var e = new PostHttpEvent(controllerSet+key
+                  +(isset(path)?"/"+path
+                      +(isset(domain)?"/"+domain
+                          +(isset(expire)?"/"+expire:'')
+                      :'')
+                  :'')
+                ,
+                result=>{
             delete window.COOKIE[path+key];
             window.COOKIE[path+key]={
               "DataType":"Cookie",
@@ -30,6 +36,9 @@ function Cookie(key, value, path, domain, expire){
             };
             if(isset(f))
                 (f)();
+        },
+        {
+          "Value":isset(value)?value:null
         });
         e.run();
     };
