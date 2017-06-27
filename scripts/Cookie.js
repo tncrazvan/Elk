@@ -52,11 +52,9 @@ function Cookie(key, value, path, domain, expire){
     };
     this.get=function(f){
         var e = new HttpEvent(controllerGet+key,e=>{
+            window.COOKIE[path+key]=JSON.parse(e);
             if(isset(f))
                 (f)(JSON.parse(e));
-            else{
-                window.COOKIE[path+key]=JSON.parse(e);
-            }
         });
         e.run();
     };
