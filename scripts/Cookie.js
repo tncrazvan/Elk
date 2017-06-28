@@ -10,6 +10,7 @@ function Cookie(key, value, path, domain, expire){
     var controllerSet = "/@Set/cookie";
     var controllerUnset = "/@Unset/cookie";
     var controllerGet = "/@Get/cookie";
+    var controllerIsset = "/@Isset/cookie";
     key =isset(key)?"/"+key:"/?";
     path =isset(path)?path:"";
     domain =isset(domain)?domain:document.location.hostname;
@@ -55,6 +56,14 @@ function Cookie(key, value, path, domain, expire){
             window.COOKIE[path+key]=JSON.parse(e);
             if(isset(f))
                 (f)(JSON.parse(e));
+        });
+        e.run();
+    };
+
+    this.isset=function(f){
+        var e = new HttpEvent(controllerIsset+key,e=>{
+            if(isset(f))
+                (f)(Number(JSON.parse(e))>=0);
         });
         e.run();
     };
