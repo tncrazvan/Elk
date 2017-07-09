@@ -1,1 +1,2 @@
 Project.defaultController = "Home/main";
+Project.MTU = 32000;
