@@ -16,6 +16,11 @@ function getJobLocation(){
     });
     return currentLocation;
 }
+
+function getProtocol(){
+  return window.location.href.split("://")[0];
+}
+
 function isset(object){
     if(object!==undefined){
         return true;
@@ -45,8 +50,12 @@ function isFunction(functionToCheck) {
  return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
 }
 
-function create(tag){
-    return document.createElement(tag);
+function create(tag,content){
+    var element = document.createElement(tag);
+    if(isset(content)){
+      element.innerHTML = content;
+    }
+    return element;
 }
 
 function Box(tag, $function) {
@@ -81,7 +90,7 @@ function HttpEvent(uri,success, other, type, data) {
     var url = Project.workspace+uri;
     var type = isset(type)?type:'GET'; //default transmission method
     var dataType = 'text/plain';
-    var contentType = 'application/json charset=utf-8';
+    var contentType = 'application/json';
 
 
     this.setUrl = function (value) {
@@ -116,7 +125,8 @@ function HttpEvent(uri,success, other, type, data) {
 
         var formdata = new FormData();  //new storage for properly formatted json array/object to flush
         for (var key in data) {
-            formdata.append(key, data[key].btoa());
+            formdata.append(key, btoa(data[key]));
+
         }
 
         var ajax = new XMLHttpRequest();
