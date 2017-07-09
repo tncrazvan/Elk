@@ -11,9 +11,12 @@ function Cookie(key, value, path, domain, expire){
     var controllerUnset = "/@Unset/cookie";
     var controllerGet = "/@Get/cookie";
     var controllerIsset = "/@Isset/cookie";
-    key =isset(key)?"/"+key:"/?";
-    path =isset(path)?path:"";
+    key =isset(key)?key:"?";
+    path =isset(path)?path:"/";
+    value =isset(value)?value:"";
     domain =isset(domain)?domain:document.location.hostname;
+    expire =isset(expire)?expire:new String((Date.now()/1000).truncate(0)+60*60*24*7); //1 week of cookie is default
+
     /*
     IMPORTANT: reading cookies and unsetting cookies is done using the GET method of HTTP,
     however, in order to set the value of a (new or old) cookie the POST method is used instead.
@@ -22,49 +25,55 @@ function Cookie(key, value, path, domain, expire){
     as browsers often display the URL of every GET request in some way (on the javascript console or on the address bar).
     */
     this.set=function(f){
-        var e = new PostHttpEvent(controllerSet+key
-                  +(isset(path)?"/"+path
-                      +(isset(domain)?"/"+domain
-                          +(isset(expire)?"/"+expire:'')
-                      :'')
-                  :'')
-                ,
-                result=>{
-            delete window.COOKIE[path+key];
-            window.COOKIE[path+key]={
-              "DataType":"Cookie",
-              "Value":value
-            };
-            if(isset(f))
-                (f)();
-        },
-        {
-          "Value":isset(value)?value:null
-        });
-        e.run();
+      var e = new PostHttpEvent(controllerSet,result=>{
+
+          delete window.COOKIE[path+key];
+          window.COOKIE[path+key]=JSON.parse(result);
+          if(isset(f)) (f)();
+      },
+      {
+        "name":key,
+        "path":path,
+        "domain":domain,
+        "expire":expire,
+        "value":value
+      });
+      e.run();
     };
     this.unset=function(f){
-        var e = new HttpEvent(controllerUnset+key,result=>{
-            delete window.COOKIE[path+key];
-            if(isset(f))
-                (f)();
-        });
-        e.run();
+      var e = new PostHttpEvent(controllerUnset,result=>{
+          delete window.COOKIE[path+key];
+          if(isset(f)) (f)();
+      },
+      {
+        "name":key,
+        "path":path,
+        "domain":domain
+      });
+      e.run();
     };
     this.get=function(f){
-        var e = new HttpEvent(controllerGet+key,e=>{
-            window.COOKIE[path+key]=JSON.parse(e);
-            if(isset(f))
-                (f)(JSON.parse(e));
-        });
-        e.run();
+      var e = new PostHttpEvent(controllerGet,e=>{
+          window.COOKIE[path+key]=JSON.parse(e);
+          if(isset(f))
+              (f)(JSON.parse(e));
+      },
+      {
+        "name":key,
+        "path":path,
+        "domain":domain
+      });
+      e.run();
     };
 
     this.isset=function(f){
-        var e = new HttpEvent(controllerIsset+key,e=>{
-            if(isset(f))
-                (f)(Number(JSON.parse(e))>=0);
-        });
-        e.run();
+      var e = new PostHttpEvent(controllerIsset,e=>{
+          if(isset(f)) (f)(Number(JSON.parse(e))>=0);
+      },{
+        "name":key,
+        "path":path,
+        "domain":domain
+      });
+      e.run();
     };
 }
