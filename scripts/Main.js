@@ -263,6 +263,19 @@ function go(link, onready, target) {
     window.JobLocation=link;
 }
 
+//basically does the same thing as go(ling, onready, target), but it's more straight forward
+function setContent(uri,target,changeState){
+  new HttpEvent("/@"+uri,result=>{
+    if(isset(changeState))
+      if(changeState){
+        history.pushState(null, document.title, Project.workspace + '/' + uri);
+        window.JobLocation=uri;
+      }
+
+    target.applyHtml(result);
+  }).run();
+}
+
 function forevery(array, $function, counter, from, to) {
     var i;
     var isLast = false;
@@ -588,4 +601,7 @@ String.prototype.btoa = function() {
 };
 String.prototype.atob = function() {
     return decodeURIComponent(escape(atob(this)));
+};
+String.prototype.capitalize = function() {
+    return this.replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
 };
