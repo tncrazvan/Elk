@@ -240,7 +240,12 @@ function applyHtml(target,data){
               tmp[0] = "*";
             }
             if(tmp.length > 0){
-              item.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+              try{
+                item.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+              }catch(error){
+                console.error(error)
+                console.error(tmp);
+              }
             }
           }else{
             children = item.childNodes;
@@ -252,7 +257,13 @@ function applyHtml(target,data){
                   tmp[0] = "*";
                 }
                 if(tmp.length > 0){
-                  child.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+                  try{
+                    child.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+                  }catch(error){
+                    console.error(error)
+                    console.error(tmp);
+                  }
+
                 }
               }
             });
