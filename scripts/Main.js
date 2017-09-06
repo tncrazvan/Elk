@@ -198,18 +198,35 @@ function HttpEvent(uri,success, other, type, data) {
 var Job = HttpEvent;
 
 function applyHtml(target,data){
+    var re = /@\(.*\)/i;
+    var tmp_re;
+    var found = data.match(re);
+    if(!isnull(found)){
+      foreach(found,item=>{
+        tmp_re = /^@\(/i;
+        item = item.replace(tmp_re,"");
+        tmp_re = /\)$/i;
+        item = item.replace(tmp_re,"");
+
+
+      });
+    }
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
     //text and ignore it. The parsing is being done below inside the foreach cycle.
-    target.innerHTML = data;
+
+    //target.innerHTML = data;
+
     //temporary parent element
     //I'm using this to throw in the result data
     //and parse it as child nodes.
     var temp = document.createElement("div");
-        temp.innerHTML = data;
+        temp.innerHTML = data.trim();
     var elements = temp.childNodes;
+    target.innerHTML = "";
     foreach(elements,function(item){ //iterating through each tag
+        target.appendChild(item);
         //if this current element has an "id" attribute set to something...
         if(isset(item.id)){
             //...save element on the window object
@@ -219,12 +236,40 @@ function applyHtml(target,data){
             //"R.id()" will do this for me.
             window[item.id] = R.id(item.id);
         }
+
+
+
+
+
         //find <script>
         if(item.tagName === "SCRIPT"){
             //parse <script> contents as javascript code
             eval(item.innerHTML);
+        }else if(isset(item.tagName) && item.tagName !== "STYLE"){
+          if(item.hasAttribute("@")){
+            tmp = item.getAttribute("@").split("/");
+            item.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+          }else{
+            children = item.childNodes;
+            foreachChild(children,child=>{
+              if(child.hasAttribute("@")){
+                tmp = child.getAttribute("@").split("/");
+                child.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+              }
+            });
+          }
         }
     });
+}
+
+function foreachChild(children,f){
+  foreach(children,child=>{
+    if(child.childNodes.length > 0){
+      foreachChild(child.childNodes,f);
+    }else if(child.nodeName !== "#text" && child.nodeName !== "#comment"){
+      (f)(child);
+    }
+  });
 }
 
 fx.i = 0;
@@ -604,4 +649,9 @@ String.prototype.atob = function() {
 };
 String.prototype.capitalize = function() {
     return this.replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+};
+
+translate=function(element,string){
+  tmp = string.split("/");
+  element.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
 };
