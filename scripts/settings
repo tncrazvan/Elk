@@ -1,2 +1,15 @@
 Project.defaultController = "Home/main";
 Project.MTU = 32000;
+
+
+  window
+    .vocabulary
+    .addPage(new Page("collabora"));
+
+  window
+    .vocabulary
+    .page["*"]
+    .addPhrase("example",{
+      "en": "example"
+      "it": "esempio",
+    });
