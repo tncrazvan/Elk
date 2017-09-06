@@ -198,19 +198,6 @@ function HttpEvent(uri,success, other, type, data) {
 var Job = HttpEvent;
 
 function applyHtml(target,data){
-    var re = /@\(.*\)/i;
-    var tmp_re;
-    var found = data.match(re);
-    if(!isnull(found)){
-      foreach(found,item=>{
-        tmp_re = /^@\(/i;
-        item = item.replace(tmp_re,"");
-        tmp_re = /\)$/i;
-        item = item.replace(tmp_re,"");
-
-
-      });
-    }
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
@@ -247,14 +234,26 @@ function applyHtml(target,data){
             eval(item.innerHTML);
         }else if(isset(item.tagName) && item.tagName !== "STYLE"){
           if(item.hasAttribute("@")){
-            tmp = item.getAttribute("@").split("/");
-            item.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+            tmp = item.getAttribute("@").trim().split("/");
+            if(tmp.length === 1){
+              tmp[1] = tmp[0];
+              tmp[0] = "*";
+            }
+            if(tmp.length > 0){
+              item.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+            }
           }else{
             children = item.childNodes;
             foreachChild(children,child=>{
               if(child.hasAttribute("@")){
-                tmp = child.getAttribute("@").split("/");
-                child.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+                tmp = child.getAttribute("@").trim().split("/");
+                if(tmp.length === 1){
+                  tmp[1] = tmp[0];
+                  tmp[0] = "*";
+                }
+                if(tmp.length > 0){
+                  child.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+                }
               }
             });
           }
