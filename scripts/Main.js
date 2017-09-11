@@ -208,33 +208,27 @@ function applyHtml(target,data){
     //temporary parent element
     //I'm using this to throw in the result data
     //and parse it as child nodes.
-    var temp = document.createElement("div");
-        temp.innerHTML = data.trim();
-    var elements = temp.childNodes;
-    target.innerHTML = "";
-    foreach(elements,function(item){ //iterating through each tag
-        target.appendChild(item);
-        //if this current element has an "id" attribute set to something...
-        if(isset(item.id)){
-            //...save element on the window object
-            //I'm not directly saving "item" into window because the node
-            //doesn't exist inside the dom at this point,
-            //I need to find the element after it's been created.
-            //"R.id()" will do this for me.
-            window[item.id] = R.id(item.id);
-        }
 
 
+    target.innerHTML = data;
 
-
-
+    foreach(target.childNodes,function(item){ //iterating through each tag
         //find <script>
-        if(item.tagName === "SCRIPT"){
+        if(item.nodeName === "SCRIPT"){
             //parse <script> contents as javascript code
             eval(item.innerHTML);
-        }else if(isset(item.tagName) && item.tagName !== "STYLE"){
+        }else if(item.nodeName[0] !=="#"){
+          //if this current element has an "id" attribute set to something...
+          if(item.hasAttribute("id")){
+              //...save element on the window object
+              //I'm not directly saving "item" into window because the node
+              //doesn't exist inside the dom at this point,
+              //I need to find the element after it's been created.
+              //"R.id()" will do this for me.
+              window[item.getAttribute("id")] = item;
+          }
           if(item.hasAttribute("@")){
-            tmp = item.getAttribute("@").trim().split("/");
+            tmp = item.getAttribute("@").split("/");
             if(tmp.length === 1){
               tmp[1] = tmp[0];
               tmp[0] = "*";
@@ -251,7 +245,7 @@ function applyHtml(target,data){
             children = item.childNodes;
             foreachChild(children,child=>{
               if(child.hasAttribute("@")){
-                tmp = child.getAttribute("@").trim().split("/");
+                tmp = child.getAttribute("@").split("/");
                 if(tmp.length === 1){
                   tmp[1] = tmp[0];
                   tmp[0] = "*";
