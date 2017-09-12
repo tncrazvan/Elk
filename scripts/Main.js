@@ -655,7 +655,74 @@ String.prototype.capitalize = function() {
     return this.replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
 };
 
+String.prototype.parseInt=function(){
+  return parseInt(this);
+};
+
 translate=function(element,string){
   tmp = string.split("/");
   element.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
 };
+
+function sendFile(file, ws, progress) {
+
+    var counter = 0;
+    var confirmed = false;
+    var fileSize   = file.size;
+    var chunkSize  = Project.MTU; // bytes
+    var offset     = 0;
+    var self       = this; // we need a reference to the current object
+    var chunkReaderBlock = null;
+    var r;
+    var blob;
+    ws.onmessage=function(e){
+      confirmed = true;
+    };
+    ws.onclose=function(){
+      console.log("disconnected");
+    };
+    var readEventHandler = function(evt) {
+        if (evt.target.error == null) {
+            counter++;
+            confirmed = false;
+            offset += chunkSize;
+            if(offset > fileSize) offset = fileSize;
+            /*console.log("###################### "+(offset*100/fileSize).truncate(0)+"%");
+            console.log("length:"+chunkSize+" (sum:"+offset+", file-size:"+fileSize+")");*/
+            (progress)((offset*100/fileSize));
+            ws.send(evt.target.result.split("base64,")[1]);
+            evt.target.result = null;
+            evt = null;
+            r = null;
+            blob = null;
+        } else {
+            console.err("Read error: " + evt.target.error);
+            return;
+        }
+
+
+          (function poll(){
+            if(confirmed){
+              if(offset < fileSize){
+                chunkReaderBlock(offset, chunkSize, file);
+              }else{
+                ws.send(";");
+              }
+            }else{
+              setTimeout(()=>{poll();},10);
+            }
+          })();
+
+    }
+
+    chunkReaderBlock = function(_offset, length, _file) {
+        r = new FileReader();
+        r.onload = readEventHandler;
+        blob = _file.slice(_offset, length + _offset);
+
+        r.readAsDataURL(blob);
+    }
+
+    // now let's start the read with the first block
+    chunkReaderBlock(offset, chunkSize, file);
+}
