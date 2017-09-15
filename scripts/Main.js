@@ -125,8 +125,7 @@ function HttpEvent(uri,success, other, type, data) {
 
         var formdata = new FormData();  //new storage for properly formatted json array/object to flush
         for (var key in data) {
-            formdata.append(key, btoa(data[key]));
-
+            formdata.append(key, data[key].btoa());
         }
 
         var ajax = new XMLHttpRequest();
@@ -243,7 +242,7 @@ function applyHtml(target,data){
             }
           }else{
             children = item.childNodes;
-            foreachChild(children,child=>{
+            foreachChild(children,function(child){
               if(child.hasAttribute("@")){
                 tmp = child.getAttribute("@").split("/");
                 if(tmp.length === 1){
@@ -267,7 +266,7 @@ function applyHtml(target,data){
 }
 
 function foreachChild(children,f){
-  foreach(children,child=>{
+  foreach(children,function(child){
     if(child.childNodes.length > 0){
       foreachChild(child.childNodes,f);
     }else if(child.nodeName !== "#text" && child.nodeName !== "#comment"){
@@ -314,7 +313,7 @@ function go(link, onready, target) {
 
 //basically does the same thing as go(ling, onready, target), but it's more straight forward
 function setContent(uri,target,changeState){
-  new HttpEvent("/@"+uri,result=>{
+  new HttpEvent("/@"+uri,function(result){
     if(isset(changeState))
       if(changeState){
         history.pushState(null, document.title, Project.workspace + '/' + uri);
@@ -664,7 +663,10 @@ translate=function(element,string){
   element.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
 };
 
-function sendFile(file, ws, progress) {
+function sendFile(file, info, ws, progress, done) {
+    if(!isset(info)) return;
+    if(!isset(ws)) return;
+    if(!isset(progress)) progress = function(){};
 
     var counter = 0;
     var confirmed = false;
@@ -679,7 +681,8 @@ function sendFile(file, ws, progress) {
       confirmed = true;
     };
     ws.onclose=function(){
-      console.log("disconnected");
+      //console.log("disconnected");
+      (done)();
     };
     var readEventHandler = function(evt) {
         if (evt.target.error == null) {
@@ -709,7 +712,7 @@ function sendFile(file, ws, progress) {
                 ws.send(";");
               }
             }else{
-              setTimeout(()=>{poll();},10);
+              setTimeout(function(){poll();},10);
             }
           })();
 
@@ -723,6 +726,28 @@ function sendFile(file, ws, progress) {
         r.readAsDataURL(blob);
     }
 
-    // now let's start the read with the first block
-    chunkReaderBlock(offset, chunkSize, file);
+    //send file information (name,size,ecc)
+    var head = JSON.stringify(info).btoa();
+    ws.send(head);
+    confirmed = false;
+    //busy waiting...
+    (function poll1(){
+      if(confirmed){
+        // now separating the header from the body of the file
+        ws.send(":");
+        confirmed = false;
+        //busy waiting again...
+        (function poll2(){
+          if(confirmed){
+            // now let's start the read with the first block
+            chunkReaderBlock(offset, chunkSize, file);
+          }else{
+            setTimeout(function(){poll2();},10);
+          }
+        })();
+      }else{
+        setTimeout(function(){poll1();},10);
+      }
+    })();
+
 }
