@@ -644,6 +644,13 @@ function base64ToVideoBlob(string){
     return new Blob([byteArray], {type: 'video/webm'});
 }
 
+Number.prototype.btoa = function() {
+    return btoa(unescape(encodeURIComponent(this+"")));
+};
+Number.prototype.atob = function() {
+    return decodeURIComponent(escape(atob(this+"")));
+};
+
 String.prototype.btoa = function() {
     return btoa(unescape(encodeURIComponent(this)));
 };
