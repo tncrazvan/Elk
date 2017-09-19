@@ -603,6 +603,10 @@ function selectText(container) {
     }
 }
 
+Element.prototype.clear=function(){
+  this.innerHTML = "";
+};
+
 Element.prototype.remove=function(){
     this.oldParent = this.parentElement;
     this.parentElement.removeChild(this);
@@ -610,24 +614,30 @@ Element.prototype.remove=function(){
 Element.prototype.restore=function(){
     this.oldParent.appendChild(this);
 };
+Element.prototype.hide=function(){
+  if(this.style.display.trim() !== "none"){
+    if(this.style.display.trim() !== ""){
+        this.originalDisplay=this.style.display;
+    }else{
+        this.originalDisplay="block";
+    }
+    this.style.display="none";
+  }
+};
+Element.prototype.show=function(){
+    this.style.display=this.originalDisplay;
+};
 
 Element.prototype.toggleDisplay=function(){
-    if(this.style.display!=="none"){
-        if(isset(this.style.display) && this.style.display !== ""){
-            this.oldDisplay=this.style.display;
-        }else{
-            this.oldDisplay="block";
-        }
-
-        this.style.display="none";
+    if(this.style.display.trim() !== "none" ){
+      this.show();
     }else{
-        this.style.display=this.oldDisplay;
+      this.hide();
     }
 };
 Element.prototype.applyHtml=function(data){
   applyHtml(this,data);
 };
-
 
 Number.prototype.truncate=function(places){
     return Math.trunc(this * Math.pow(10, places)) / Math.pow(10, places);
@@ -643,6 +653,13 @@ function base64ToVideoBlob(string){
     var byteArray = new Uint8Array(byteNumbers);
     return new Blob([byteArray], {type: 'video/webm'});
 }
+
+Array.prototype.btoa = function() {
+    return btoa(unescape(encodeURIComponent(this+"")));
+};
+Array.prototype.atob = function() {
+    return decodeURIComponent(escape(atob(this+"")));
+};
 
 Number.prototype.btoa = function() {
     return btoa(unescape(encodeURIComponent(this+"")));
@@ -675,6 +692,7 @@ function sendFile(file, info, ws, progress, done) {
     if(!isset(ws)) return;
     if(!isset(progress)) progress = function(){};
 
+    var lastResponse;
     var counter = 0;
     var confirmed = false;
     var fileSize   = file.size;
@@ -685,11 +703,11 @@ function sendFile(file, info, ws, progress, done) {
     var r;
     var blob;
     ws.onmessage=function(e){
+      lastResponse = e;
       confirmed = true;
     };
     ws.onclose=function(){
-      //console.log("disconnected");
-      (done)();
+      (done)(lastResponse.data);
     };
     var readEventHandler = function(evt) {
         if (evt.target.error == null) {
