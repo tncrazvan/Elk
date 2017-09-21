@@ -1,4 +1,4 @@
-Project.defaultController = "Home/main";
+Project.DEFAULT_CONTROLLER = "Home/main";
 Project.MTU = 32000;
 
 
