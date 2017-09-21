@@ -7,11 +7,6 @@ function MainActivity(){
      */
     MainActivity.counter++;
     (function MainActivity(){
-        if(getJobLocation()===""){
-          go(Project.defaultController);
-        }else{
-          go(getJobLocation());
-        }
         document.session={};
         (function Client(){
             //Your code starts here
