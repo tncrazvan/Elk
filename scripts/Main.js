@@ -14,6 +14,12 @@ function getJobLocation(){
         }
         i++;
     });
+    var tmp = location.href.split(currentLocation+"?");
+    if(tmp.length > 1){
+      if(tmp[1] !== ""){
+        currentLocation += "?"+tmp[1];
+      }
+    }
     return currentLocation;
 }
 
@@ -53,7 +59,7 @@ function isFunction(functionToCheck) {
 function create(tag,content){
     var element = document.createElement(tag);
     if(isset(content)){
-      element.innerHTML = content;
+      element.applyHtml(content);
     }
     return element;
 }
@@ -281,6 +287,7 @@ fx.before = function () {};
 fx.after = function () {};
 fx.target = document.getElementById("main-content");
 function fx(focus, onready, target) {
+    if(!isset(onready)) onready = function(){};
     var $this=this;
     if (!isset(target)) {
         this.target = fx.target;
@@ -614,27 +621,51 @@ Element.prototype.remove=function(){
 Element.prototype.restore=function(){
     this.oldParent.appendChild(this);
 };
-Element.prototype.hide=function(){
-  if(this.style.display.trim() !== "none"){
-    if(this.style.display.trim() !== ""){
-        this.originalDisplay=this.style.display;
+function hide(element){
+  if(element.style.display.trim() !== "none"){
+    if(element.style.display.trim() !== ""){
+        element.originalDisplay=element.style.display;
     }else{
-        this.originalDisplay="block";
+        element.originalDisplay="block";
     }
-    this.style.display="none";
   }
+  element.style.display="none";
+}
+
+function show(element){
+  if(!isset(element.originalDisplay)) element.originalDisplay = "block";
+  element.style.display=element.originalDisplay;
+}
+
+Element.prototype.showElement=function(){
+  if(isset(this.style.display) && this.style.display !== ""){
+      this.oldDisplay=this.style.display;
+  }else{
+      this.oldDisplay="block";
+  }
+
+  this.style.display="none";
 };
-Element.prototype.show=function(){
-    this.style.display=this.originalDisplay;
+
+Element.prototype.hideElement=function(){
+  if(!isset(this.oldDisplay)) this.oldDisplay = "block";
+  this.style.display=this.oldDisplay;
 };
 
 Element.prototype.toggleDisplay=function(){
-    if(this.style.display.trim() !== "none" ){
-      this.show();
+    if(this.style.display!=="none"){
+        if(isset(this.style.display) && this.style.display !== ""){
+            this.oldDisplay=this.style.display;
+        }else{
+            this.oldDisplay="block";
+        }
+
+        this.style.display="none";
     }else{
-      this.hide();
+        this.style.display=this.oldDisplay;
     }
 };
+
 Element.prototype.applyHtml=function(data){
   applyHtml(this,data);
 };
