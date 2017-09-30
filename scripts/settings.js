@@ -10,8 +10,8 @@ Project.MTU = 32000;
     .vocabulary
     .page["general"]
     .addPhrase("example",{
-      "en": "example"
-      "it": "esempio",
+      "en": "example",
+      "it": "esempio"
     });
 /*
   HOW TO USE:
