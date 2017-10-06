@@ -4,7 +4,5 @@
 function CircleSpinner(){
   var spinner=R.new("div");
       spinner.className="circle-spinner";
-  this.getSpinner=function(){
-    return spinner;
-  };
+  return spinner;
 }
