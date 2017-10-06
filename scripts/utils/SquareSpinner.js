@@ -30,7 +30,5 @@ function SquareSpinner(){
     item.className="sk-cube sk-cube"+(i+1);
     grid.appendChild(item);
   });
-  this.getSpinner=function(){
-    return grid;
-  };
+  return grid
 }
