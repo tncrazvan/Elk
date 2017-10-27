@@ -91,7 +91,7 @@ function PostHttpEvent(uri,success,data,other){
 function HttpEvent(uri,success, other, type, data) {
     $this = this;
     this.other = other; //other stuff such as listeners, ecc (check ajax progress listener below for that regard)
-    this.success = (success ? success : function () {});
+    success = (isset(success) ? success : function () {});
 
     var url = Project.workspace+uri;
     var type = isset(type)?type:'GET'; //default transmission method
@@ -127,14 +127,23 @@ function HttpEvent(uri,success, other, type, data) {
     this.getContentType = function () {
         return contentType;
     };
+
+    var requestHeaders = {};
+    this.setRequestHeader=function(headers){
+      requestHeaders = headers;
+    };
     this.run = function () {
 
         var formdata = new FormData();  //new storage for properly formatted json array/object to flush
         for (var key in data) {
-            formdata.append(key, data[key].btoa());
+            try{
+              formdata.append(key, data[key].btoa());
+            }catch(e){
+              console.log("Attempting btoa() on: "+data[key]);
+            }
         }
 
-        var ajax = new XMLHttpRequest();
+        var xhr = new XMLHttpRequest();
         //set events here
 
 
@@ -144,43 +153,43 @@ function HttpEvent(uri,success, other, type, data) {
             	switch(key){
             	/**************DOWNLOAD******************/
                     case "downloadProgress":
-                        ajax.addEventListener('progress', function (event) {
+                        xhr.addEventListener('progress', function (event) {
                             (other[key])(event);
                         }, false);
                     break;
                     case "downloadComplete":
-                        ajax.addEventListener('load', function (event) {
+                        xhr.addEventListener('load', function (event) {
                             (other[key])(event);
                         }, false);
                         break;
                     case "downloadError":
-                        ajax.addEventListener('error', function (event) {
+                        xhr.addEventListener('error', function (event) {
                             (other[key])(event);
                         }, false);
                         break;
                     case "downloadAbort":
-                        ajax.addEventListener('abort', function (event) {
+                        xhr.addEventListener('abort', function (event) {
                             (other[key])(event);
                         }, false);
                         break;
             	/*****************UPLOAD***********************/
                     case "uploadProgress":
-                        ajax.upload.addEventListener('progress', function (event) {
+                        xhr.upload.addEventListener('progress', function (event) {
                             (other[key])(event);
                         }, false);
                         break;
                     case "uploadComplete":
-                        ajax.upload.addEventListener('load', function (event) {
+                        xhr.upload.addEventListener('load', function (event) {
                             (other[key])(event);
                         }, false);
                         break;
                     case "uploadError":
-                        ajax.upload.addEventListener('error', function (event) {
+                        xhr.upload.addEventListener('error', function (event) {
                             (other[key])(event);
                         }, false);
                         break;
                     case "uploadAbort":
-                        ajax.upload.addEventListener('abort', function (event) {
+                        xhr.upload.addEventListener('abort', function (event) {
                             (other[key])(event);
                         }, false);
                         break;
@@ -189,14 +198,20 @@ function HttpEvent(uri,success, other, type, data) {
 
             }
         }
-        ajax.onreadystatechange = function () { //whenever state changes
-            if (this.readyState === 4 && this.status === 200){ //onready state run
-                (success)(ajax.responseText);
+        xhr.onreadystatechange = function () { //whenever state changes
+            if (this.readyState === 4){ //onready state run
+                (success)(xhr.responseText,this.status);
             }
         };
 
-        ajax.open(this.getMethod(), this.getUrl(),true);
-        ajax.send(formdata); //run
+
+        xhr.open(this.getMethod(), this.getUrl(),true);
+        for (var key in requestHeaders) {
+           if (requestHeaders.hasOwnProperty(key)) {
+              xhr.setRequestHeader(key,requestHeaders[key]);
+           }
+        }
+        xhr.send(formdata); //run
     };
 }
 
@@ -671,6 +686,7 @@ Element.prototype.applyHtml=function(data){
 };
 
 Number.prototype.truncate=function(places){
+  if(!isset(Math.trunc)) return this;
     return Math.trunc(this * Math.pow(10, places)) / Math.pow(10, places);
 };
 
@@ -690,6 +706,12 @@ Boolean.prototype.btoa = function() {
 };
 Boolean.prototype.atob = function() {
     return decodeURIComponent(escape(atob(this+"")));
+};
+
+prependToArray=function(value,array){
+  var newArray = array.slice();
+  newArray.unshift(value);
+  return newArray;
 };
 
 Array.prototype.btoa = function() {
