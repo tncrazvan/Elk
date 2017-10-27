@@ -237,7 +237,7 @@ function TMP55341(strings){
 
 var Job = HttpEvent;
 
-function applyHtml(target,data){
+function applyHtml(target,data,allowVariables){
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
@@ -249,7 +249,7 @@ function applyHtml(target,data){
     //I'm using this to throw in the result data
     //and parse it as child nodes.
 
-
+    allowVariables = (isset(allowVariables)?false:allowVariables);
     target.innerHTML = data;
     var tmpText;
     var tmpArray = new Array();
@@ -258,7 +258,7 @@ function applyHtml(target,data){
         if(item.nodeName === "SCRIPT"){
             //parse <script> contents as javascript code
             eval(item.innerHTML);
-        }else if(item.nodeName === "#text"){
+        }else if(item.nodeName === "#text" && allowVariables){
           if((tmpText = item.data.trim()) !== ""){
             tmpArray = tmpText.match(/\$[A-z0-9\-\.]+/g); //search for variables
             for (var key in tmpArray) {
