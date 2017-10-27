@@ -56,10 +56,10 @@ function isFunction(functionToCheck) {
  return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
 }
 
-function create(tag,content){
+function create(tag,content,allowVariables){
     var element = document.createElement(tag);
     if(isset(content)){
-      element.applyHtml(content);
+      element.applyHtml(content,allowVariables);
     }
     return element;
 }
@@ -249,7 +249,7 @@ function applyHtml(target,data,allowVariables){
     //I'm using this to throw in the result data
     //and parse it as child nodes.
 
-    allowVariables = (isset(allowVariables)?false:allowVariables);
+    allowVariables = (isset(allowVariables)?allowVariables:false);
     target.innerHTML = data;
     var tmpText;
     var tmpArray = new Array();
@@ -262,26 +262,28 @@ function applyHtml(target,data,allowVariables){
           if((tmpText = item.data.trim()) !== ""){
             tmpArray = tmpText.match(/\$[A-z0-9\-\.]+/g); //search for variables
             for (var key in tmpArray) {
-               if (tmpArray.hasOwnProperty(key)) {
-                 if(key !== "index" && key !== "input"){
+              if (tmpArray.hasOwnProperty(key)) {
+                if(key !== "index" && key !== "input"){
 
-                   //console.log("ELEMENT NODENAME:"+window[tmpArray[key].substring(1)]);
-                   if(typeof TMP55341(tmpArray[0].substring(1).split(/\./g)) === "object"){
-                     if(isset(TMP55341(tmpArray[0].substring(1).split(/\./g)).nodeName)){
-                       //console.log("This is a node.");
-                       item.data = "";
-                       insertAfter(TMP55341(tmpArray[0].substring(1).split(/\./g)),item.previousSibling);
-                     }else{
-                       //console.log("This is not a node, but it is an object.");
-                       item.data = JSON.stringify(TMP55341(tmpArray[0].substring(1).split(/\./g)));
-                       //console.log(tmpArray[key].substring(1));
-                     }
-                   }else{
-                     //console.log("This is not an object nor a node, maybe a string or a number?");
-                     item.data = TMP55341(tmpArray[0].substring(1).split(/\./g));
-                   }
-
-
+                    //console.log("ELEMENT NODENAME:"+window[tmpArray[key].substring(1)]);
+                    var entity = TMP55341(tmpArray[0].substring(1).split(/\./g));
+                    if(typeof entity === "object"){
+                      if(isset(entity.nodeName)){
+                        //console.log("This is a node.");
+                        item.data = "";
+                        if(isset(item.previousSibling) && !isnull(item.previousSibling))
+                          insertAfter(entity,item.previousSibling);
+                        else
+                          item.parentNode.insertBefore(entity,item.parentNode.firstChild);
+                      }else{
+                        //console.log("This is not a node, but it is an object.");
+                        item.data = JSON.stringify(entity);
+                        //console.log(tmpArray[key].substring(1));
+                      }
+                    }else{
+                      //console.log("This is not an object nor a node, maybe a string or a number?");
+                      item.data = entity;
+                    }
                  }
                }
             }
@@ -383,7 +385,7 @@ function go(link, onready, target) {
 }
 
 //basically does the same thing as go(ling, onready, target), but it's more straight forward
-function setContent(uri,target,changeState){
+function setContent(uri,target,changeState,allowVariables){
   new HttpEvent("/@"+uri,function(result){
     if(isset(changeState))
       if(changeState){
@@ -391,7 +393,7 @@ function setContent(uri,target,changeState){
         window.JobLocation=uri;
       }
 
-    target.applyHtml(result);
+    target.applyHtml(result,allowVariables);
   }).run();
 }
 
@@ -730,8 +732,8 @@ Element.prototype.toggleDisplay=function(){
     }
 };
 
-Element.prototype.applyHtml=function(data){
-  applyHtml(this,data);
+Element.prototype.applyHtml=function(data,allowVariables){
+  applyHtml(this,data,allowVariables);
 };
 
 Number.prototype.truncate=function(places){
