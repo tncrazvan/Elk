@@ -215,6 +215,26 @@ function HttpEvent(uri,success, other, type, data) {
     };
 }
 
+function insertAfter(newNode, referenceNode) {
+    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+}
+
+function TMP55341(strings){
+  var tmp,counter=0;
+  for(var key in strings){
+    if (strings.hasOwnProperty(key)){
+      if(counter===0){
+        tmp = window[strings[key]];
+      }else{
+        tmp = tmp[strings[key]];
+      }
+    }
+    counter++;
+  }
+  return tmp;
+}
+
+
 var Job = HttpEvent;
 
 function applyHtml(target,data){
@@ -231,12 +251,41 @@ function applyHtml(target,data){
 
 
     target.innerHTML = data;
-
+    var tmpText;
+    var tmpArray = new Array();
     foreach(target.childNodes,function(item){ //iterating through each tag
         //find <script>
         if(item.nodeName === "SCRIPT"){
             //parse <script> contents as javascript code
             eval(item.innerHTML);
+        }else if(item.nodeName === "#text"){
+          if((tmpText = item.data.trim()) !== ""){
+            tmpArray = tmpText.match(/\$[A-z0-9\-\.]+/g); //search for variables
+            for (var key in tmpArray) {
+               if (tmpArray.hasOwnProperty(key)) {
+                 if(key !== "index" && key !== "input"){
+
+                   //console.log("ELEMENT NODENAME:"+window[tmpArray[key].substring(1)]);
+                   if(typeof TMP55341(tmpArray[0].substring(1).split(/\./g)) === "object"){
+                     if(isset(TMP55341(tmpArray[0].substring(1).split(/\./g)).nodeName)){
+                       //console.log("This is a node.");
+                       item.data = "";
+                       insertAfter(TMP55341(tmpArray[0].substring(1).split(/\./g)),item.previousSibling);
+                     }else{
+                       //console.log("This is not a node, but it is an object.");
+                       item.data = JSON.stringify(TMP55341(tmpArray[0].substring(1).split(/\./g)));
+                       //console.log(tmpArray[key].substring(1));
+                     }
+                   }else{
+                     //console.log("This is not an object nor a node, maybe a string or a number?");
+                     item.data = TMP55341(tmpArray[0].substring(1).split(/\./g));
+                   }
+
+
+                 }
+               }
+            }
+          }
         }else if(item.nodeName[0] !=="#"){
           //if this current element has an "id" attribute set to something...
           if(item.hasAttribute("id")){
