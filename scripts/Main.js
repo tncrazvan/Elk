@@ -219,6 +219,8 @@ function insertAfter(newNode, referenceNode) {
     referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
 }
 
+//this function will try and find one leaf within
+//the window variables tree (given the "string" path) and return it
 function TMP55341(strings){
   var tmp,counter=0;
   for(var key in strings){
@@ -232,6 +234,119 @@ function TMP55341(strings){
     counter++;
   }
   return tmp;
+}
+
+//this function will parse for inline html variables inside the given #text nodes
+PARSEVAR55TH72.tmpText;
+PARSEVAR55TH72.tmpArray = new Array();
+function PARSEVAR55TH72(item){
+  if((PARSEVAR55TH72.tmpText = item.data.trim()) !== ""){
+    PARSEVAR55TH72.tmpArray = PARSEVAR55TH72.tmpText.match(/\$[A-z0-9\-\.]+/g); //search for variables
+    for (var key in PARSEVAR55TH72.tmpArray) {
+      if (PARSEVAR55TH72.tmpArray.hasOwnProperty(key)) {
+        if(key !== "index" && key !== "input"){
+
+            //console.log("ELEMENT NODENAME:"+window[PARSEVAR55TH72.tmpArray[key].substring(1)]);
+            var entity = TMP55341(PARSEVAR55TH72.tmpArray[0].substring(1).split(/\./g));
+            if(typeof entity === "object"){
+              if(isset(entity.nodeName)){
+                //console.log("This is a node.");
+                item.data = "";
+                if(isset(item.previousSibling) && !isnull(item.previousSibling))
+                  insertAfter(entity,item.previousSibling);
+                else
+                  item.parentNode.insertBefore(entity,item.parentNode.firstChild);
+              }else{
+                //console.log("This is not a node, but it is an object.");
+                item.data = JSON.stringify(entity);
+                //console.log(PARSEVAR55TH72.tmpArray[key].substring(1));
+              }
+            }else{
+              //console.log("This is not an object nor a node, maybe a string or a number?");
+              item.data = entity;
+            }
+         }
+       }
+    }
+  }
+}
+
+//This function will parse the dom item and replace
+//its contents with the relative solution in the vocabulary
+function PARSEVOCABULARY3100JJYT6(item){
+  tmp = item.getAttribute("@").split("/");
+  if(tmp.length === 1){
+    tmp[1] = tmp[0];
+    tmp[0] = "*";
+  }
+  if(tmp.length > 0){
+    try{
+      item.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+    }catch(error){
+      console.error(error)
+      console.error(tmp);
+    }
+  }
+}
+
+//This function will parse the contents of the given children of the dom and
+//replace its contents with the relative solution in the vocabulary
+function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
+  foreach(children,function(child){
+    if(child.nodeName[0] !== "#"){
+      if(child.hasAttribute("@")){
+        tmp = child.getAttribute("@").split("/");
+        if(tmp.length === 1){
+          tmp[1] = tmp[0];
+          tmp[0] = "*";
+        }
+        if(tmp.length > 0){
+          try{
+            child.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+          }catch(error){
+            console.error(error)
+            console.error(tmp);
+          }
+
+        }
+      }else{
+        PARSEVOCABULARYCHILDREN347HHH7J(child.childNodes,allowVariables);
+      }
+    }else if(child.nodeName === "#text" && allowVariables){
+      PARSEVAR55TH72(child);
+    }
+  });
+}
+
+//iterating through every child node of the provided target
+function RECURSIVE76349AAD(target,allowVariables){
+
+  foreach(target.childNodes,function(item){ //iterating through each tag
+      //find <script>
+      if(item.nodeName === "SCRIPT"){
+          //parse <script> contents as javascript code
+          eval(item.innerHTML);
+      }else if(item.nodeName === "#text" && allowVariables){
+        PARSEVAR55TH72(item);
+      }else if(item.nodeName[0] !== "#"){ //if it's not some type of string or comment...
+        //if this current element has an "id" attribute set to something...
+        if(item.hasAttribute("id")){
+            //...save element on the window object
+            //I'm not directly saving "item" into window because the node
+            //doesn't exist inside the dom at this point,
+            //I need to find the element after it's been created.
+            //"R.id()" will do this for me.
+            window[item.getAttribute("id")] = item;
+        }
+        //check if this item has an attribute named "@"
+        if(item.hasAttribute("@")){
+          PARSEVOCABULARY3100JJYT6(item);
+        }else{ //if it doesn't...
+          //keep going and try to parse its children
+          PARSEVOCABULARYCHILDREN347HHH7J(item.childNodes,allowVariables);
+        }
+      }
+  });
 }
 
 
@@ -251,90 +366,7 @@ function applyHtml(target,data,allowVariables){
 
     allowVariables = (isset(allowVariables)?allowVariables:false);
     target.innerHTML = data;
-    var tmpText;
-    var tmpArray = new Array();
-    foreach(target.childNodes,function(item){ //iterating through each tag
-        //find <script>
-        if(item.nodeName === "SCRIPT"){
-            //parse <script> contents as javascript code
-            eval(item.innerHTML);
-        }else if(item.nodeName === "#text" && allowVariables){
-          if((tmpText = item.data.trim()) !== ""){
-            tmpArray = tmpText.match(/\$[A-z0-9\-\.]+/g); //search for variables
-            for (var key in tmpArray) {
-              if (tmpArray.hasOwnProperty(key)) {
-                if(key !== "index" && key !== "input"){
-
-                    //console.log("ELEMENT NODENAME:"+window[tmpArray[key].substring(1)]);
-                    var entity = TMP55341(tmpArray[0].substring(1).split(/\./g));
-                    if(typeof entity === "object"){
-                      if(isset(entity.nodeName)){
-                        //console.log("This is a node.");
-                        item.data = "";
-                        if(isset(item.previousSibling) && !isnull(item.previousSibling))
-                          insertAfter(entity,item.previousSibling);
-                        else
-                          item.parentNode.insertBefore(entity,item.parentNode.firstChild);
-                      }else{
-                        //console.log("This is not a node, but it is an object.");
-                        item.data = JSON.stringify(entity);
-                        //console.log(tmpArray[key].substring(1));
-                      }
-                    }else{
-                      //console.log("This is not an object nor a node, maybe a string or a number?");
-                      item.data = entity;
-                    }
-                 }
-               }
-            }
-          }
-        }else if(item.nodeName[0] !=="#"){
-          //if this current element has an "id" attribute set to something...
-          if(item.hasAttribute("id")){
-              //...save element on the window object
-              //I'm not directly saving "item" into window because the node
-              //doesn't exist inside the dom at this point,
-              //I need to find the element after it's been created.
-              //"R.id()" will do this for me.
-              window[item.getAttribute("id")] = item;
-          }
-          if(item.hasAttribute("@")){
-            tmp = item.getAttribute("@").split("/");
-            if(tmp.length === 1){
-              tmp[1] = tmp[0];
-              tmp[0] = "*";
-            }
-            if(tmp.length > 0){
-              try{
-                item.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
-              }catch(error){
-                console.error(error)
-                console.error(tmp);
-              }
-            }
-          }else{
-            children = item.childNodes;
-            foreachChild(children,function(child){
-              if(child.hasAttribute("@")){
-                tmp = child.getAttribute("@").split("/");
-                if(tmp.length === 1){
-                  tmp[1] = tmp[0];
-                  tmp[0] = "*";
-                }
-                if(tmp.length > 0){
-                  try{
-                    child.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
-                  }catch(error){
-                    console.error(error)
-                    console.error(tmp);
-                  }
-
-                }
-              }
-            });
-          }
-        }
-    });
+    RECURSIVE76349AAD(target,allowVariables);
 }
 
 function foreachChild(children,f){
