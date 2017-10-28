@@ -8,7 +8,7 @@ function include(){}
 
 include.css = function(list){
     if(list.constructor !== Array){
-        use.css([list]);
+        include.css([list]);
     }else{
         var i = 0, length = list.length;
         if(length>0){
@@ -35,7 +35,7 @@ include.css = function(list){
 };
 include.js = function(list){
     if(list.constructor !== Array){
-        use.js([list]);
+        include.js([list]);
     }else{
         var i = 0, length = list.length;
         if(list.constructor === Array && length>0){
