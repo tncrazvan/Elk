@@ -919,3 +919,7 @@ function sendFile(file, info, ws, progress, done) {
     })();
 
 }
+
+function Url(string){
+    return "url(\""+string+"\")";
+}
