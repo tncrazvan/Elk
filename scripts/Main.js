@@ -23,6 +23,105 @@ function getJobLocation(){
     return currentLocation;
 }
 
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+window.COOKIE={};
+function Cookie(key, value, path, domain, expire){
+    var $this = this;
+    var controllerSet = "/@Set/cookie";
+    var controllerUnset = "/@Unset/cookie";
+    var controllerGet = "/@Get/cookie";
+    var controllerIsset = "/@Isset/cookie";
+    key =isset(key)?key:"?";
+    path =isset(path)?path:"/";
+    value =isset(value)?value:"";
+    domain =isset(domain)?domain:document.location.hostname;
+    expire =isset(expire)?expire:new String((Date.now()/1000).truncate(0)+60*60*24*7); //1 week of cookie is default
+
+    /*
+    IMPORTANT: reading cookies and unsetting cookies is done using the GET method of HTTP,
+    however, in order to set the value of a (new or old) cookie the POST method is used instead.
+    Using the POST method the cookie's length is not limied and it is not sent in clear, eg:
+    setting a password for an account should not be visible anywhere on your browser, but that is not the case with GET requests,
+    as browsers often display the URL of every GET request in some way (on the javascript console or on the address bar).
+    */
+    this.set=function(f){
+      var e = new PostHttpEvent(controllerSet,result=>{
+
+          delete window.COOKIE[path+key];
+          window.COOKIE[path+key]=JSON.parse(result);
+          if(isset(f)) (f)();
+      },
+      {
+        "name":key,
+        "path":path,
+        "domain":domain,
+        "expire":expire,
+        "value":value
+      });
+      e.run();
+    };
+    this.unset=function(f){
+      var e = new PostHttpEvent(controllerUnset,result=>{
+          delete window.COOKIE[path+key];
+          if(isset(f)) (f)();
+      },
+      {
+        "name":key,
+        "path":path,
+        "domain":domain
+      });
+      e.run();
+    };
+    this.get=function(f){
+      var e = new PostHttpEvent(controllerGet,e=>{
+          window.COOKIE[path+key]=JSON.parse(e);
+          if(isset(f))
+              (f)(JSON.parse(e));
+      },
+      {
+        "name":key,
+        "path":path,
+        "domain":domain
+      });
+      e.run();
+    };
+
+    this.isset=function(f){
+      var e = new PostHttpEvent(controllerIsset,e=>{
+          if(isset(f)) (f)(Number(JSON.parse(e))>=0);
+      },{
+        "name":key,
+        "path":path,
+        "domain":domain
+      });
+      e.run();
+    };
+}
+
+
+function R(){}
+R.cls=function(cls){
+  if(isset(cls) && cls !== "")
+    return document.getElementsByClassName(cls);
+  else
+    return null;
+};
+R.id=function(id){
+  if(isset(id) && id !== "")
+    return document.getElementById(id);
+  else
+    return null;
+};
+R.new=function(object){
+  return document.createElement(object);
+};
+
+
 function getProtocol(){
   return window.location.href.split("://")[0];
 }
@@ -927,3 +1026,79 @@ function Url(string){
 function Percent(value){
     return value+"%";
 }
+
+function Pixel(value){
+    return value+"px";
+}
+
+function Rgb(red,green,blue){
+    return new String("rgb("+red+","+green+","+blue+")");
+}
+
+function Rgba(red,green,blue,alfa){
+    return new String("rgba("+red+","+green+","+blue+","+alfa+")");
+}
+
+function Popup(url,title,i) {
+    
+    if(isset(i.toolbar)){
+    	if(i.toolbar) i.toolbar = 'yes';
+    	if(!i.toolbar) i.toolbar = 'no';
+    }else i.toolbar = 'no';
+    
+    if(isset(i.location)){
+    	if(i.location) i.location = 'yes';
+    	if(!i.location) i.location = 'no';
+    }else i.location = 'no';
+    
+    if(isset(i.directories)){
+    	if(i.directories) i.directories = 'yes';
+    	if(!i.directories) i.directories = 'no';
+    }else i.directories = 'no';
+    
+    if(isset(i.status)){
+    	if(i.status) i.status = 'yes';
+    	if(!i.status) i.status = 'no';
+    }else i.status = 'no';
+    
+    if(isset(i.menubar)){
+    	if(i.menubar) i.menubar = 'yes';
+    	if(!i.menubar) i.menubar = 'no';
+    }else i.menubar = 'no';
+    
+    if(isset(i.scrollbars)){
+    	if(i.scrollbars) i.scrollbars = 'yes';
+    	if(!i.scrollbars) i.scrollbars = 'no';
+    }else i.scrollbars = 'no';
+    
+    if(isset(i.resizable)){
+    	if(i.resizable) i.resizable = 'yes';
+    	if(!i.resizable) i.resizable = 'no';
+    }else i.resizable = 'no';
+    
+    if(isset(i.copyhistory)){
+    	if(i.copyhistory) i.copyhistory = 'yes';
+    	if(!i.copyhistory) i.copyhistory = 'no';
+    }else i.copyhistory = 'no';
+    
+    if(!isset(i.width)) i.width = 800;
+    if(!isset(i.height)) i.height = 500;
+    
+
+    i.left = (screen.width/2)-(i.width/2);
+    i.top = (screen.height/2)-(i.height/2);
+    
+    return window.open(url, title, 
+    		'toolbar='+i.toolbar+', '+
+    		'location='+i.location+', '+
+    		'directories='+i.directories+', '+
+    		'status='+i.status+', '+
+    		'menubar='+i.menubar+', '+
+    		'scrollbars='+i.scrollbars+', '+
+    		'resizable='+i.resizable+', '+
+    		'copyhistory='+i.copyhistory+', '+
+    		'width='+i.width+', '+
+    		'height='+i.height+', '+
+    		'top='+i.top+', '+
+    		'left='+i.left+'');
+} 
