@@ -23,86 +23,6 @@ function getJobLocation(){
     return currentLocation;
 }
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-window.COOKIE={};
-function Cookie(key, value, path, domain, expire){
-    var $this = this;
-    var controllerSet = "/@Set/cookie";
-    var controllerUnset = "/@Unset/cookie";
-    var controllerGet = "/@Get/cookie";
-    var controllerIsset = "/@Isset/cookie";
-    key =isset(key)?key:"?";
-    path =isset(path)?path:"/";
-    value =isset(value)?value:"";
-    domain =isset(domain)?domain:document.location.hostname;
-    expire =isset(expire)?expire:new String((Date.now()/1000).truncate(0)+60*60*24*7); //1 week of cookie is default
-
-    /*
-    IMPORTANT: reading cookies and unsetting cookies is done using the GET method of HTTP,
-    however, in order to set the value of a (new or old) cookie the POST method is used instead.
-    Using the POST method the cookie's length is not limied and it is not sent in clear, eg:
-    setting a password for an account should not be visible anywhere on your browser, but that is not the case with GET requests,
-    as browsers often display the URL of every GET request in some way (on the javascript console or on the address bar).
-    */
-    this.set=function(f){
-      var e = new PostHttpEvent(controllerSet,result=>{
-
-          delete window.COOKIE[path+key];
-          window.COOKIE[path+key]=JSON.parse(result);
-          if(isset(f)) (f)();
-      },
-      {
-        "name":key,
-        "path":path,
-        "domain":domain,
-        "expire":expire,
-        "value":value
-      });
-      e.run();
-    };
-    this.unset=function(f){
-      var e = new PostHttpEvent(controllerUnset,result=>{
-          delete window.COOKIE[path+key];
-          if(isset(f)) (f)();
-      },
-      {
-        "name":key,
-        "path":path,
-        "domain":domain
-      });
-      e.run();
-    };
-    this.get=function(f){
-      var e = new PostHttpEvent(controllerGet,e=>{
-          window.COOKIE[path+key]=JSON.parse(e);
-          if(isset(f))
-              (f)(JSON.parse(e));
-      },
-      {
-        "name":key,
-        "path":path,
-        "domain":domain
-      });
-      e.run();
-    };
-
-    this.isset=function(f){
-      var e = new PostHttpEvent(controllerIsset,e=>{
-          if(isset(f)) (f)(Number(JSON.parse(e))>=0);
-      },{
-        "name":key,
-        "path":path,
-        "domain":domain
-      });
-      e.run();
-    };
-}
-
 
 function R(){}
 R.cls=function(cls){
@@ -517,15 +437,7 @@ function go(link, onready, target) {
 
 //basically does the same thing as go(ling, onready, target), but it's more straight forward
 function setContent(uri,target,changeState,allowVariables){
-  uri = uri.trim();
-  let uri_prepend = "";
-  if(uri.substr(0,Project.URI_FILE_DELIMITER.length) === Project.URI_FILE_DELIMITER){
-    uri_prepend = "";
-    uri = uri.substr(Project.URI_FILE_DELIMITER.length);
-  }else{
-    uri_prepend = "/@";
-  }
-  new HttpEvent(uri_prepend+uri,function(result){
+  new HttpEvent("/@"+uri,function(result){
     if(isset(changeState))
       if(changeState){
         history.pushState(null, document.title, Project.workspace + '/' + uri);
