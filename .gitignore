@@ -1,4 +1,6 @@
 # Ignore everything
 /*
+!/.gitignore
 !/assets/
 !/scripts/
+!/scripts/.gitignore
