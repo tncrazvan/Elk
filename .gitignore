@@ -1,9 +1,2 @@
 # Ignore everything
 *
-
-# But not these files...
-!.gitignore
-!assets/*
-!scripts/framework/*
-
-# ...even if they are in subdirectories
