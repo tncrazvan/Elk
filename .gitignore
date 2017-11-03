@@ -1,11 +1,2 @@
 # Ignore everything
-*
-
-# Except for...
-
-!*/
-!.gitignore
-!Cookie.js
-!include.js
-!index.js
-!Main.js
+/*
