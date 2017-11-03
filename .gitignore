@@ -1,4 +1,11 @@
-scripts/settings
-view
-php
-modules
+# Ignore everything
+*
+
+# But not these files...
+!.gitignore
+!assets
+!scripts/framework
+!template.latex
+
+# ...even if they are in subdirectories
+!*/
