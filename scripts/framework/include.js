@@ -49,7 +49,7 @@ include.js = function(list){
                     if(file.charAt(0)==="@"){
                         script.setAttribute("src",(file.replace("@","")));
                     }else{
-                        script.setAttribute("src",workspace+"/scripts/"+(file)+".js");
+                        script.setAttribute("src",workspace+"scripts/"+(file)+".js");
                     }
                     document.body.appendChild(script);
                     script.onload=function(){
