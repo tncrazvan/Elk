@@ -1,11 +1,11 @@
-/*Project.workspace='/my_root';
+/*Project.WORKSPACE='/my_root';
 function Project(){}
-var workspace = Project.workspace;
-window.workspace = Project.workspace;*/
+var workspace = Project.WORKSPACE;
+window.workspace = Project.WORKSPACE;*/
 function getJobLocation(){
     var currentLocation = "", i = 0;
     var exp = window.location.pathname.split("/");
-    var temp = Project.workspace.split("/");
+    var temp = Project.WORKSPACE.split("/");
     foreach(exp,function(item){
         if(i===temp.length){
             currentLocation +=item;
@@ -112,7 +112,7 @@ function HttpEvent(uri,success, other, type, data) {
     this.other = other; //other stuff such as listeners, ecc (check ajax progress listener below for that regard)
     success = (isset(success) ? success : function () {});
 
-    var url = Project.workspace+uri;
+    var url = Project.WORKSPACE+uri;
     var type = isset(type)?type:'GET'; //default transmission method
     var dataType = 'text/plain';
     var contentType = 'application/json';
@@ -428,7 +428,7 @@ function go(link, onready, target) {
 	//modifying client url,
     //this is absolutelly not required, it just refreshes the client's
     //url in order to let them know their location or be able to copy it
-    history.pushState(null, document.title, Project.workspace + '/' + link);
+    history.pushState(null, document.title, Project.WORKSPACE + '/' + link);
 	//writes new content (with some flashy animation)
     fx(link, onready, target);
 	//saves new location
@@ -440,7 +440,7 @@ function setContent(uri,target,changeState,allowVariables){
   new HttpEvent("/@"+uri,function(result){
     if(isset(changeState))
       if(changeState){
-        history.pushState(null, document.title, Project.workspace + '/' + uri);
+        history.pushState(null, document.title, Project.WORKSPACE + '/' + uri);
         window.JobLocation=uri;
       }
 
