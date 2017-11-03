@@ -1,4 +1,2 @@
-Project.DEFAULT_CONTROLLER = "index.html";
+Project.DEFAULT_CONTROLLER = "Home";
 Project.MTU = 32000;
-Project.NAME = "Elk";
-Project.REQUEST_PREFIX = "/@";
