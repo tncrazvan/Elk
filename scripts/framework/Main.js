@@ -413,7 +413,7 @@ function fx(focus, onready, target) {
     }
     (fx.before)(this.target);
 
-    var j = new HttpEvent("/@"+focus,function(r){
+    var j = new HttpEvent(Project.REQUEST_PREFIX+focus,function(r){
     	setTimeout(function(){
             applyHtml($this.target,r);
             (fx.after)($this.target);
@@ -437,7 +437,7 @@ function go(link, onready, target) {
 
 //basically does the same thing as go(ling, onready, target), but it's more straight forward
 function setContent(uri,target,changeState,allowVariables){
-  new HttpEvent("/@"+uri,function(result){
+  new HttpEvent(Project.REQUEST_PREFIX+uri,function(result){
     if(isset(changeState))
       if(changeState){
         history.pushState(null, document.title, Project.workspace + '/' + uri);
