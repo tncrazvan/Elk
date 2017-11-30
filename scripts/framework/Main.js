@@ -417,7 +417,7 @@ fx.i = 0;
 fx.delay = 0;
 fx.before = function () {};
 fx.after = function () {};
-fx.target = document.getElementById("main-content");
+fx.target = document.getElementById("main");
 function fx(focus, onready, target) {
     if(!isset(onready)) onready = function(){};
     var $this=this;
