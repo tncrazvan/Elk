@@ -9,9 +9,11 @@ function MainActivity(){
     (function MainActivity(){
         document.session={};
         (function Client(){
-            //Your code starts here
-            App();
-            //your code ends here
+            if(getJobLocation() === ""){
+              setContent(Project.DEFAULT_CONTROLLER,main,true),then(App);
+            }else{
+              setContent(getJobLocation(),main,true).then(App);
+            }
         })();
     })();
 }

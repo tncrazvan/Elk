@@ -1,10 +1,6 @@
 window.App=function(){
     /*
-    Layout definition requests should be sent from here
+    Your code goes here
     */
-    if(getJobLocation() === ""){
-      setContent(Project.DEFAULT_CONTROLLER,main,true);
-    }else{
-      setContent(getJobLocation(),main,true);
-    }
+    console.log("Application is ready.");
 };

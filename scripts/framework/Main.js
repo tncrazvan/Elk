@@ -452,15 +452,19 @@ function go(link, onready, target) {
 
 //basically does the same thing as go(ling, onready, target), but it's more straight forward
 function setContent(uri,target,changeState,allowVariables){
-  new HttpEvent("/@"+uri,function(result){
-    if(isset(changeState))
-      if(changeState){
-        history.pushState(null, document.title, Project.workspace + '/' + uri);
-        window.JobLocation=uri;
-      }
+  return new Promise(function(resolve,reject){
+    new HttpEvent("/@"+uri,function(result){
+      if(isset(changeState))
+        if(changeState){
+          history.pushState(null, document.title, Project.workspace + '/' + uri);
+          window.JobLocation=uri;
+        }
 
-    target.applyHtml(result,allowVariables);
-  }).run();
+      target.applyHtml(result,allowVariables);
+      (resolve)();
+    }).run();
+  });
+
 }
 
 function forevery(array, $function, counter, from, to) {
