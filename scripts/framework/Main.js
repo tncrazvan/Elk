@@ -158,7 +158,7 @@ function HttpEvent(uri,success, other, type, data) {
             try{
               formdata.append(key, data[key].btoa());
             }catch(e){
-              console.log("Attempting btoa() on: "+data[key]);
+              console.log("Failed btoa() attempt on: "+data[key]);
             }
         }
 
@@ -368,6 +368,21 @@ function RECURSIVE76349AAD(target,allowVariables){
   });
 }
 
+var GetPromise = function(uri){
+  return new Promise(function(resolve,reject){
+    new HttpEvent(uri,function(result){
+      (resolve)(result);
+    }).run();
+  });
+};
+
+var PostPromise = function(uri,data){
+  return new Promise(function(resolve,reject){
+    new HttpEvent(uri,function(result){
+      (resolve)(result);
+    },data).run();
+  });
+};
 
 var Job = HttpEvent;
 
