@@ -9,11 +9,7 @@ function MainActivity(){
     (function MainActivity(){
         document.session={};
         (function Client(){
-            if(getJobLocation() === ""){
-              setContent(Project.DEFAULT_CONTROLLER,main,true),then(App);
-            }else{
-              setContent(getJobLocation(),main,true).then(App);
-            }
+            App(getJobLocation());
         })();
     })();
 }

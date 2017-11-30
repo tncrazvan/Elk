@@ -4,10 +4,6 @@ Project.ready = false;
 function Project(){}
 window.workspace = Project.workspace;
 
-window.modules = document.createElement("div");
-window.modules.setAttribute("id","modules");
-window.modules.style.display = "none";
-
 function include(){}
 
 include.modules = function(list){
