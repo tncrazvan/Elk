@@ -19,9 +19,10 @@ include.modules = function(list){
           new HttpEvent("modules/"+file+".html",function(result){
             let moduleHolder = document.createElement("module");
             moduleHolder.applyHtml(result);
-            (resolve)();
             if(i<length){
               poll();
+            }else{
+              (resolve)();
             }
           }).run();
         })();
@@ -53,9 +54,10 @@ include.css = function(list){
           }
           document.head.appendChild(style);
           style.onload=function(){
-            (resolve)();
             if(i<length){
               poll();
+            }else{
+              (resolve)();
             }
           };
         })();
@@ -84,14 +86,14 @@ include.js = function(list){
           }
           document.body.appendChild(script);
           script.onload=function(){
-            (resolve)();
             if(i<length){
                 poll();
             }else{
-                if(MainActivity.counter===0){
-                    Project.ready = true;
-                    new MainActivity();
-                }
+              (resolve)();
+              if(MainActivity.counter===0){
+                  Project.ready = true;
+                  new MainActivity();
+              }
             }
           };
         })();
