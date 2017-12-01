@@ -287,14 +287,14 @@ function MATCHANDREPLACE6HHETWW888(item,string){
       let localTmp = string.split(/\s/g);
       foreach(localTmp,function(word){
         if(/\$[A-z0-9\-\.]+/g.test(word)){
-          var entity = GETENTITYHRTY3634FDV(word);
+          var entity = GETENTITYHRTY3634FDV(word.trim());
           RENDERENTITY222222DDER(item,entity);
         }else{
           item.data += word;
         }
       });
     }else{
-      var entity = GETENTITYHRTY3634FDV(PARSEVAR55TH72.precursorArray[0]);
+      var entity = GETENTITYHRTY3634FDV(PARSEVAR55TH72.precursorArray[0].trim());
       RENDERENTITY222222DDER(item,entity);
     }
   }else{
