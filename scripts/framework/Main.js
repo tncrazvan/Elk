@@ -305,7 +305,10 @@ function PARSEVOCABULARY3100JJYT6(item){
 function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
   foreach(children,function(child){
     if(child.nodeName[0] !== "#"){
-      if(child.hasAttribute("@")){
+      if(child.nodeName === "SCRIPT"){
+          //parse <script> contents as javascript code
+          eval(child.innerHTML);
+      }else if(child.hasAttribute("@")){
         tmp = child.getAttribute("@").split("/");
         if(tmp.length === 1){
           tmp[1] = tmp[0];
