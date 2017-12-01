@@ -3,25 +3,25 @@ Project.ready = false;
 
 function Project(){}
 window.workspace = Project.workspace;
-
 function include(){}
 
 include.modules = function(list){
   if(list.constructor !== Array){
-    return include.module([list]);
+    return include.modules([list]);
   }else{
     return new Promise(function(resolve,reject){
+      let tmpModules = '';
       let i = 0, length = list.length;
       if(length>0){
         (function poll(){
           i++;
           let file = list[i-1]; //without extension
-          new HttpEvent("modules/"+file+".html",function(result){
-            let moduleHolder = document.createElement("module");
-            moduleHolder.applyHtml(result);
+          new HttpEvent("/modules/"+file+".html",function(result){
+            tmpModules += result;
             if(i<length){
               poll();
             }else{
+              modules.applyHtml(tmpModules,true);
               (resolve)();
             }
           }).run();
@@ -90,10 +90,6 @@ include.js = function(list){
                 poll();
             }else{
               (resolve)();
-              if(MainActivity.counter===0){
-                  Project.ready = true;
-                  new MainActivity();
-              }
             }
           };
         })();

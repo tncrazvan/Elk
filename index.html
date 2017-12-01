@@ -7,13 +7,16 @@
     <script type="text/javascript" src="/scripts/framework/include.js"></script>
   </head>
   <body>
+    <div id="modules"></div>
     <div id="main"></div>
 
     <script type="text/javascript">
       include.css([
         "bootstrap.min",
         "bootstrap-theme.min",
-        "spinners"
+        "spinners",
+        "template",
+        "skin"
       ]);
 
       include.js([
@@ -24,10 +27,11 @@
         //add your scripts before index
         "utils/SquareSpinner",
         "utils/CircleSpinner",
-        "utils/jquery-3.2.1.min",
-        "utils/bootstrap.min",
         "framework/Index"
-      ]);
+      ]).then(function(){
+          Project.ready = true;
+          new MainActivity();
+      });
     </script>
   </body>
 </html>
