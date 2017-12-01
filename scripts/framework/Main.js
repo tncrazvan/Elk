@@ -255,40 +255,67 @@ function TMP55341(strings){
   return tmp;
 }
 
+function RENDERENTITY222222DDER(item,entity){
+  //if it's an object...
+  if(typeof entity === "object"){
+    //"if it has a tag name..." (aka: "if it's a dom element...")
+    if(isset(entity.nodeName)){
+      //console.log("This is a node.");
+      item.data = "";
+      if(isset(item.previousSibling) && !isnull(item.previousSibling)){
+        insertAfter(entity,item.previousSibling);
+      }else{
+        item.parentNode.insertBefore(entity,item.parentNode.firstChild);
+      }
+    }else{
+      //console.log("This is not a node, but it is an object.");
+      item.data = JSON.stringify(entity);
+      //console.log(PARSEVAR55TH72.tmpArray[key].substring(1));
+    }
+  }
+}
+
+function GETENTITYHRTY3634FDV(string){
+  return TMP55341(string.substring(1).split(/\./g));
+
+}
+
+function MATCHANDREPLACE6HHETWW888(item,string){
+  //identify variable
+  if(/\$[A-z0-9\-\.]+/g.test(string)){
+    if(/.+\s+.+/g.test(string)){
+      let localTmp = string.split(/\s/g);
+      foreach(localTmp,function(word){
+        if(/\$[A-z0-9\-\.]+/g.test(word)){
+          var entity = GETENTITYHRTY3634FDV(word);
+          RENDERENTITY222222DDER(item,entity);
+        }else{
+          item.data += word;
+        }
+      });
+    }else{
+      var entity = GETENTITYHRTY3634FDV(PARSEVAR55TH72.precursorArray[0]);
+      RENDERENTITY222222DDER(item,entity);
+    }
+  }else{
+    item.data = string;
+  }
+}
+
+
 //this function will parse for inline html variables inside the given #text nodes
 PARSEVAR55TH72.tmpText;
 PARSEVAR55TH72.precursorArray = new Array();
 PARSEVAR55TH72.tmpArray = new Array();
 function PARSEVAR55TH72(item){
+  //assign content to tmp variable
   if((PARSEVAR55TH72.tmpText = item.data.trim()) !== ""){
     //identify every word
     PARSEVAR55TH72.precursorArray = PARSEVAR55TH72.tmpText.match(/\s*.+/g); //search for variables
     //console.log(PARSEVAR55TH72.precursorArray);
     for(var key in PARSEVAR55TH72.precursorArray){
       if(PARSEVAR55TH72.precursorArray.hasOwnProperty(key)){
-
-        //identify variable
-        if(/\$[A-z0-9\-\.]+/g.test(PARSEVAR55TH72.precursorArray[key])){
-          var entity = TMP55341(PARSEVAR55TH72.precursorArray[0].substring(1).split(/\./g));
-          if(typeof entity === "object"){
-            if(isset(entity.nodeName)){
-              //console.log("This is a node.");
-              item.data = "";
-              if(isset(item.previousSibling) && !isnull(item.previousSibling)){
-                insertAfter(entity,item.previousSibling);
-              }else{
-                item.parentNode.insertBefore(entity,item.parentNode.firstChild);
-              }
-            }else{
-              //console.log("This is not a node, but it is an object.");
-              item.data = JSON.stringify(entity);
-              //console.log(PARSEVAR55TH72.tmpArray[key].substring(1));
-            }
-          }
-        }else{
-          item.data = PARSEVAR55TH72.precursorArray[key];
-        }
-
+        MATCHANDREPLACE6HHETWW888(item,PARSEVAR55TH72.precursorArray[key]);
       }
     }
   }
