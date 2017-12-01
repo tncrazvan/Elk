@@ -255,68 +255,29 @@ function TMP55341(strings){
   return tmp;
 }
 
-function RENDERENTITY222222DDER(item,entity){
+function GETENTITYHRTY3634FDV(string){
+  return TMP55341(string.substring(0).split(/\./g));
+}
+
+
+
+//this function will parse for inline html variables inside the given #text nodes
+function PARSEVAR55TH72(child){
+  //assign content to tmp variable
+  var entity = GETENTITYHRTY3634FDV(child.getAttribute("$"));
+
+
+
   //if it's an object...
   if(typeof entity === "object"){
     //"if it has a tag name..." (aka: "if it's a dom element...")
     if(isset(entity.nodeName)){
-      //console.log("This is a node.");
-      item.data = "";
-      if(isset(item.previousSibling) && !isnull(item.previousSibling)){
-        insertAfter(entity,item.previousSibling);
-      }else{
-        item.parentNode.insertBefore(entity,item.parentNode.firstChild);
-      }
+      child.innerHTML = "";
+      child.appendChild(entity);
     }else{
       //console.log("This is not a node, but it is an object.");
-      item.data = JSON.stringify(entity);
+      child.innerHTML = JSON.stringify(entity);
       //console.log(PARSEVAR55TH72.tmpArray[key].substring(1));
-    }
-  }
-}
-
-function GETENTITYHRTY3634FDV(string){
-  return TMP55341(string.substring(1).split(/\./g));
-
-}
-
-function MATCHANDREPLACE6HHETWW888(item,string){
-  //identify variable
-  if(/\$[A-z0-9\-\.]+/g.test(string)){
-    if(/.+\s+.+/g.test(string)){
-      let localTmp = string.split(/\s/g);
-      foreach(localTmp,function(word){
-        if(/\$[A-z0-9\-\.]+/g.test(word)){
-          var entity = GETENTITYHRTY3634FDV(word.trim());
-          RENDERENTITY222222DDER(item,entity);
-        }else{
-          item.data += word;
-        }
-      });
-    }else{
-      var entity = GETENTITYHRTY3634FDV(PARSEVAR55TH72.precursorArray[0].trim());
-      RENDERENTITY222222DDER(item,entity);
-    }
-  }else{
-    item.data = string;
-  }
-}
-
-
-//this function will parse for inline html variables inside the given #text nodes
-PARSEVAR55TH72.tmpText;
-PARSEVAR55TH72.precursorArray = new Array();
-PARSEVAR55TH72.tmpArray = new Array();
-function PARSEVAR55TH72(item){
-  //assign content to tmp variable
-  if((PARSEVAR55TH72.tmpText = item.data.trim()) !== ""){
-    //identify every word
-    PARSEVAR55TH72.precursorArray = PARSEVAR55TH72.tmpText.match(/\s*.+/g); //search for variables
-    //console.log(PARSEVAR55TH72.precursorArray);
-    for(var key in PARSEVAR55TH72.precursorArray){
-      if(PARSEVAR55TH72.precursorArray.hasOwnProperty(key)){
-        MATCHANDREPLACE6HHETWW888(item,PARSEVAR55TH72.precursorArray[key]);
-      }
     }
   }
 }
@@ -359,26 +320,22 @@ function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
           }
 
         }
+      }else if(child.hasAttribute("$")){
+        PARSEVAR55TH72(child);
       }else{
         PARSEVOCABULARYCHILDREN347HHH7J(child.childNodes,allowVariables);
       }
-    }else if(child.nodeName === "#text" && allowVariables){
-
-      PARSEVAR55TH72(child);
     }
   });
 }
 
 //iterating through every child node of the provided target
 function RECURSIVE76349AAD(target,allowVariables){
-
   foreach(target.childNodes,function(item){ //iterating through each tag
       //find <script>
       if(item.nodeName === "SCRIPT"){
           //parse <script> contents as javascript code
           eval(item.innerHTML);
-      }else if(item.nodeName === "#text" && allowVariables){
-        PARSEVAR55TH72(item);
       }else if(item.nodeName[0] !== "#"){ //if it's not some type of string or comment...
         //if this current element has an "id" attribute set to something...
         if(item.hasAttribute("id")){
@@ -392,6 +349,8 @@ function RECURSIVE76349AAD(target,allowVariables){
         //check if this item has an attribute named "@"
         if(item.hasAttribute("@")){
           PARSEVOCABULARY3100JJYT6(item);
+        }else if(item.hasAttribute("$")){
+          PARSEVAR55TH72(item);
         }else{ //if it doesn't...
           //keep going and try to parse its children
           PARSEVOCABULARYCHILDREN347HHH7J(item.childNodes,allowVariables);
@@ -432,7 +391,6 @@ function applyHtml(target,data,allowVariables){
 
     allowVariables = (isset(allowVariables)?allowVariables:false);
     target.innerHTML = data;
-
     RECURSIVE76349AAD(target,allowVariables);
 }
 
@@ -838,6 +796,15 @@ Element.prototype.toggleDisplay=function(){
 Element.prototype.applyHtml=function(data,allowVariables){
   applyHtml(this,data,allowVariables);
 };
+
+Element.prototype.insertChildAtIndex = function(child, index) {
+  if (!index) index = 0
+  if (index >= this.children.length) {
+    this.appendChild(child)
+  } else {
+    this.insertBefore(child, this.children[index])
+  }
+}
 
 Number.prototype.truncate=function(places){
   if(!isset(Math.trunc)) return this;
