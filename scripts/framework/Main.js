@@ -257,35 +257,39 @@ function TMP55341(strings){
 
 //this function will parse for inline html variables inside the given #text nodes
 PARSEVAR55TH72.tmpText;
+PARSEVAR55TH72.precursorArray = new Array();
 PARSEVAR55TH72.tmpArray = new Array();
 function PARSEVAR55TH72(item){
   if((PARSEVAR55TH72.tmpText = item.data.trim()) !== ""){
-    PARSEVAR55TH72.tmpArray = PARSEVAR55TH72.tmpText.match(/\$[A-z0-9\-\.]+/g); //search for variables
-    for (var key in PARSEVAR55TH72.tmpArray) {
-      if (PARSEVAR55TH72.tmpArray.hasOwnProperty(key)) {
-        if(key !== "index" && key !== "input"){
+    //identify every word
+    PARSEVAR55TH72.precursorArray = PARSEVAR55TH72.tmpText.match(/\s*.+/g); //search for variables
+    //console.log(PARSEVAR55TH72.precursorArray);
+    for(var key in PARSEVAR55TH72.precursorArray){
+      if(PARSEVAR55TH72.precursorArray.hasOwnProperty(key)){
 
-            //console.log("ELEMENT NODENAME:"+window[PARSEVAR55TH72.tmpArray[key].substring(1)]);
-            var entity = TMP55341(PARSEVAR55TH72.tmpArray[0].substring(1).split(/\./g));
-            if(typeof entity === "object"){
-              if(isset(entity.nodeName)){
-                //console.log("This is a node.");
-                item.data = "";
-                if(isset(item.previousSibling) && !isnull(item.previousSibling))
-                  insertAfter(entity,item.previousSibling);
-                else
-                  item.parentNode.insertBefore(entity,item.parentNode.firstChild);
+        //identify variable
+        if(/\$[A-z0-9\-\.]+/g.test(PARSEVAR55TH72.precursorArray[key])){
+          var entity = TMP55341(PARSEVAR55TH72.precursorArray[0].substring(1).split(/\./g));
+          if(typeof entity === "object"){
+            if(isset(entity.nodeName)){
+              //console.log("This is a node.");
+              item.data = "";
+              if(isset(item.previousSibling) && !isnull(item.previousSibling)){
+                insertAfter(entity,item.previousSibling);
               }else{
-                //console.log("This is not a node, but it is an object.");
-                item.data = JSON.stringify(entity);
-                //console.log(PARSEVAR55TH72.tmpArray[key].substring(1));
+                item.parentNode.insertBefore(entity,item.parentNode.firstChild);
               }
             }else{
-              //console.log("This is not an object nor a node, maybe a string or a number?");
-              item.data = entity;
+              //console.log("This is not a node, but it is an object.");
+              item.data = JSON.stringify(entity);
+              //console.log(PARSEVAR55TH72.tmpArray[key].substring(1));
             }
-         }
-       }
+          }
+        }else{
+          item.data = PARSEVAR55TH72.precursorArray[key];
+        }
+
+      }
     }
   }
 }
@@ -332,6 +336,7 @@ function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
         PARSEVOCABULARYCHILDREN347HHH7J(child.childNodes,allowVariables);
       }
     }else if(child.nodeName === "#text" && allowVariables){
+
       PARSEVAR55TH72(child);
     }
   });
@@ -400,6 +405,7 @@ function applyHtml(target,data,allowVariables){
 
     allowVariables = (isset(allowVariables)?allowVariables:false);
     target.innerHTML = data;
+
     RECURSIVE76349AAD(target,allowVariables);
 }
 
