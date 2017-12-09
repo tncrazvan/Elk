@@ -178,6 +178,10 @@ HttpEvent.STATUS_LOOP_DETECTED = "508 Loop Detected";
 HttpEvent.STATUS_NOT_EXTENDED = "510 Not Extended";
 HttpEvent.STATUS_NETWORK_AUTHENTICATION_REQUIRED = "511 Network Authentication Required";
 
+function GetHttpEvent(uri,success,other){
+  return new HttpEvent(uri,success,other,"GET",{});
+}
+
 function HttpEvent(uri,success, other, type, data) {
     $this = this;
     this.status;
@@ -442,12 +446,12 @@ var HttpPromise = function(uri){
   return new HttpGetPromise(uri);
 };
 
-var HttpGetPromise = function(uri){
+var GetHttpPromise = function(uri){
   return new GetPromise(uri);
 };
 
-var HttpPostPromise = function(uri){
-  return new PostPromise(uri);
+var PostHttpPromise = function(uri,data){
+  return new PostPromise(uri,data);
 };
 
 var GetPromise = function(uri){
@@ -461,7 +465,7 @@ var GetPromise = function(uri){
 
 var PostPromise = function(uri,data){
   return new Promise(function(resolve,reject){
-    new HttpEvent(uri,function(result,status){
+    new PostHttpEvent(uri,function(result,status){
       this.status = status;
       (resolve)(result);
     },data).run();
