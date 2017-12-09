@@ -266,14 +266,12 @@ function PARSEVAR55TH72(child){
   //assign content to tmp variable
   var entity = GETENTITYHRTY3634FDV(child.getAttribute("$"));
 
-
-
   //if it's an object...
   if(typeof entity === "object"){
     //"if it has a tag name..." (aka: "if it's a dom element...")
     if(isset(entity.nodeName)){
-      child.innerHTML = "";
-      child.appendChild(entity);
+      child.parentNode.insertBefore(entity,child);
+      child.remove();
     }else{
       //console.log("This is not a node, but it is an object.");
       child.innerHTML = JSON.stringify(entity);
@@ -303,11 +301,12 @@ function PARSEVOCABULARY3100JJYT6(item){
 //This function will parse the contents of the given children of the dom and
 //replace its contents with the relative solution in the vocabulary
 function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
+  let scripts = "";
   foreach(children,function(child){
     if(child.nodeName[0] !== "#"){
       if(child.nodeName === "SCRIPT"){
-          //parse <script> contents as javascript code
-          eval(child.innerHTML);
+          //save <script> contents to variable for later use
+          scripts += child.innerHTML;
       }else if(child.hasAttribute("@")){
         tmp = child.getAttribute("@").split("/");
         if(tmp.length === 1){
@@ -330,15 +329,17 @@ function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
       }
     }
   });
+  if(scripts.trim() !== "") eval(scripts);
 }
 
 //iterating through every child node of the provided target
 function RECURSIVE76349AAD(target,allowVariables){
+  let scripts = "";
   foreach(target.childNodes,function(item){ //iterating through each tag
       //find <script>
       if(item.nodeName === "SCRIPT"){
-          //parse <script> contents as javascript code
-          eval(item.innerHTML);
+          //save <script> contents to variable for later use
+          scripts += item.innerHTML;
       }else if(item.nodeName[0] !== "#"){ //if it's not some type of string or comment...
         //if this current element has an "id" attribute set to something...
         if(item.hasAttribute("id")){
@@ -357,10 +358,24 @@ function RECURSIVE76349AAD(target,allowVariables){
         }else{ //if it doesn't...
           //keep going and try to parse its children
           PARSEVOCABULARYCHILDREN347HHH7J(item.childNodes,allowVariables);
+
         }
       }
   });
+  if(scripts.trim() !== "") eval(scripts);
 }
+
+var HttpPromise = function(uri){
+  return new HttpGetPromise(uri);
+};
+
+var HttpGetPromise = function(uri){
+  return new GetPromise(uri);
+};
+
+var HttpPostPromise = function(uri){
+  return new PostPromise(uri);
+};
 
 var GetPromise = function(uri){
   return new Promise(function(resolve,reject){
@@ -456,6 +471,16 @@ function setContent(uri,target,changeState,allowVariables){
 
       target.applyHtml(result,allowVariables);
       (resolve)();
+    }).run();
+  });
+
+}
+
+//basically does the same thing as go(ling, onready, target), but it's more straight forward
+function file_get_contents(uri){
+  return new Promise(function(resolve,reject){
+    new HttpEvent(uri,function(result){
+      (resolve)(result);
     }).run();
   });
 
