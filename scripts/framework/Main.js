@@ -291,7 +291,7 @@ function HttpEvent(uri,success, other, type, data) {
         }
         xhr.onreadystatechange = function () { //whenever state changes
             if (this.readyState === 4){ //onready state run
-              $this.status = this.status+" "+this.statusText;
+                $this.status = this.status+" "+this.statusText;
                 (success)(xhr.responseText,$this.status);
             }
         };
@@ -452,8 +452,8 @@ var HttpPostPromise = function(uri){
 
 var GetPromise = function(uri){
   return new Promise(function(resolve,reject){
-    new HttpEvent(uri,function(result){
-      this.status = $this.status;
+    new HttpEvent(uri,function(result,status){
+      this.status = status;
       (resolve)(result);
     }).run();
   });
@@ -461,8 +461,8 @@ var GetPromise = function(uri){
 
 var PostPromise = function(uri,data){
   return new Promise(function(resolve,reject){
-    new HttpEvent(uri,function(result){
-      this.status = $this.status;
+    new HttpEvent(uri,function(result,status){
+      this.status = status;
       (resolve)(result);
     },data).run();
   });
@@ -537,14 +537,18 @@ function go(link, onready, target) {
 //basically does the same thing as go(ling, onready, target), but it's more straight forward
 function setContent(uri,target,changeState,allowVariables){
   return new Promise(function(resolve,reject){
-    new HttpEvent("/@"+uri,function(result){
-      if(isset(changeState))
-        if(changeState){
-          history.pushState(null, document.title, Project.workspace + '/' + uri);
-          window.JobLocation=uri;
+    new HttpEvent("/@"+uri,function(result,status){
+      if(status === HttpEvent.STATUS_SUCCESS){
+        if(isset(changeState)){
+          if(changeState){
+            history.pushState(null, document.title, Project.workspace + '/' + uri);
+            window.JobLocation=uri;
+          }
         }
-
-      target.applyHtml(result,allowVariables);
+        target.applyHtml(result,allowVariables);
+      }else{
+        target.applyHtml("Server response:"+status);
+      }
       (resolve)();
     }).run();
   });
@@ -554,7 +558,8 @@ function setContent(uri,target,changeState,allowVariables){
 //basically does the same thing as go(ling, onready, target), but it's more straight forward
 function file_get_contents(uri){
   return new Promise(function(resolve,reject){
-    new HttpEvent(uri,function(result){
+    new HttpEvent(uri,function(result,status){
+      this.status = status;
       (resolve)(result);
     }).run();
   });
