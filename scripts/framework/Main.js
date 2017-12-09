@@ -547,7 +547,7 @@ function setContent(uri,target,changeState,allowVariables){
         }
         target.applyHtml(result,allowVariables);
       }else{
-        target.applyHtml("Server response:"+status);
+        target.applyHtml("Server status message:"+status);
       }
       (resolve)();
     }).run();
