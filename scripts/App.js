@@ -7,9 +7,9 @@ window.App=function(uri){
     include.module([
       "test"
     ]).then(function(){
-      switch (uri) {
+      switch (uri.trim()) {
         case "":
-          setContent(Project.DEFAULT_CONTROLLER,main,true,true);
+          setContent(Project.DEFAULT_PAGE,main,true,true);
           break;
         default:
           setContent(uri,main,true,true);
