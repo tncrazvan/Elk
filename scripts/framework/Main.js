@@ -107,8 +107,80 @@ function PostHttpEvent(uri,success,data,other){
   return new HttpEvent(uri,success,other,"POST",data);
 }
 
+//INFORMATINOAL RESPONSES
+HttpEvent.STATUS_CONTINUE = "100 Continue";
+HttpEvent.STATUS_SWITCHING_PROTOCOLS = "101 Switching Protocols";
+HttpEvent.STATUS_PROCESSING = "102 Processing";
+
+//SUCCESS
+HttpEvent.STATUS_SUCCESS = "200 OK";
+HttpEvent.STATUS_CREATED = "201 CREATED";
+HttpEvent.STATUS_ACCEPTED = "202 ACCEPTED";
+HttpEvent.STATUS_NON_AUTHORITATIVE_INFORMATION = "203 Non-Authoritative Information";
+HttpEvent.STATUS_NO_CONTENT = "204 No Content";
+HttpEvent.STATUS_RESET_CONTENT = "205 Reset Content";
+HttpEvent.STATUS_PARTIAL_CONTENT = "206 Partial Content";
+HttpEvent.STATUS_MULTI_STATUS = "207 Multi-Status";
+HttpEvent.STATUS_ALREADY_REPORTED = "208 Already Reported";
+HttpEvent.STATUS_IM_USED = "226 IM Used";
+
+//REDIRECTIONS
+HttpEvent.STATUS_MULTIPLE_CHOICES = "300 Multiple Choices";
+HttpEvent.STATUS_MOVED_PERMANENTLY = "301 Moved Permanently";
+HttpEvent.STATUS_FOUND = "302 Found";
+HttpEvent.STATUS_SEE_OTHER = "303 See Other";
+HttpEvent.STATUS_NOT_MODIFIED = "304 Not Modified";
+HttpEvent.STATUS_USE_PROXY = "305 Use Proxy";
+HttpEvent.STATUS_SWITCH_PROXY = "306 Switch Proxy";
+HttpEvent.STATUS_TEMPORARY_REDIRECT = "307 Temporary Redirect";
+HttpEvent.STATUS_PERMANENT_REDIRECT = "308 Permanent Redirect";
+
+//CLIENT ERRORS
+HttpEvent.STATUS_BAD_REQUEST = "400 Bad Request";
+HttpEvent.STATUS_UNAUTHORIZED = "401 Unauthorized";
+HttpEvent.STATUS_PAYMENT_REQUIRED = "402 Payment Required";
+HttpEvent.STATUS_FORBIDDEN = "403 Forbidden";
+HttpEvent.STATUS_NOT_FOUND = "404 Not Found";
+HttpEvent.STATUS_METHOD_NOT_ALLOWED = "405 Method Not Allowed";
+HttpEvent.STATUS_NOT_ACCEPTABLE = "406 Not Acceptable";
+HttpEvent.STATUS_PROXY_AUTHENTICATION_REQUIRED = "407 Proxy Authentication Required";
+HttpEvent.STATUS_REQUEST_TIMEOUT = "408 Request Timeout";
+HttpEvent.STATUS_CONFLICT = "409 Conflict";
+HttpEvent.STATUS_GONE = "410 Gone";
+HttpEvent.STATUS_LENGTH_REQUIRED = "411 Length Required";
+HttpEvent.STATUS_PRECONDITION_FAILED = "412 Precondition Failed";
+HttpEvent.STATUS_PAYLOAD_TOO_LARGE = "413 Payload Too Large";
+HttpEvent.STATUS_URI_TOO_LONG = "414 URI Too Long";
+HttpEvent.STATUS_UNSUPPORTED_MEDIA_TYPE = "415 Unsupported Media Type";
+HttpEvent.STATUS_RANGE_NOT_SATISFIABLE = "416 Range Not Satisfiable";
+HttpEvent.STATUS_EXPECTATION_FAILED = "417 Expectation Failed";
+HttpEvent.STATUS_IM_A_TEAPOT = "418 I'm a teapot";
+HttpEvent.STATUS_MISDIRECTED_REQUEST = "421 Misdirected Request";
+HttpEvent.STATUS_UNPROCESSABLE_ENTITY = "422 Unprocessable Entity";
+HttpEvent.STATUS_LOCKED = "423 Locked";
+HttpEvent.STATUS_FAILED_DEPENDENCY = "426 Failed Dependency";
+HttpEvent.STATUS_UPGRADE_REQUIRED = "428 Upgrade Required";
+HttpEvent.STATUS_PRECONDITION_REQUIRED = "429 Precondition Required";
+HttpEvent.STATUS_TOO_MANY_REQUESTS = "429 Too Many Requests";
+HttpEvent.STATUS_REQUEST_HEADER_FIELDS_TOO_LARGE = "431 Request Header Fields Too Large";
+HttpEvent.STATUS_UNAVAILABLE_FOR_LEGAL_REASONS = "451 Unavailable For Legal Reasons";
+
+//SERVER ERRORS
+HttpEvent.STATUS_INTERNAL_SERVER_ERROR = "500 Internal Server Error";
+HttpEvent.STATUS_NOT_IMPLEMENTED = "501 Not Implemented";
+HttpEvent.STATUS_BAD_GATEWAY = "502 Bad Gateway";
+HttpEvent.STATUS_SERVICE_UNAVAILABLE = "503 Service Unavailable";
+HttpEvent.STATUS_GATEWAY_TIMEOUT = "504 Gateway Timeout";
+HttpEvent.STATUS_HTTP_VERSION_NOT_SUPPORTED = "505 HTTP Version Not Supported";
+HttpEvent.STATUS_VARIANT_ALSO_NEGOTATIES = "506 Variant Also Negotiates";
+HttpEvent.STATUS_INSUFFICIENT_STORAGE = "507 Insufficient Storage";
+HttpEvent.STATUS_LOOP_DETECTED = "508 Loop Detected";
+HttpEvent.STATUS_NOT_EXTENDED = "510 Not Extended";
+HttpEvent.STATUS_NETWORK_AUTHENTICATION_REQUIRED = "511 Network Authentication Required";
+
 function HttpEvent(uri,success, other, type, data) {
     $this = this;
+    this.status;
     this.other = other; //other stuff such as listeners, ecc (check ajax progress listener below for that regard)
     success = (isset(success) ? success : function () {});
 
@@ -219,7 +291,8 @@ function HttpEvent(uri,success, other, type, data) {
         }
         xhr.onreadystatechange = function () { //whenever state changes
             if (this.readyState === 4){ //onready state run
-                (success)(xhr.responseText,this.status);
+              $this.status = this.status+" "+this.statusText;
+                (success)(xhr.responseText,$this.status);
             }
         };
 
@@ -380,6 +453,7 @@ var HttpPostPromise = function(uri){
 var GetPromise = function(uri){
   return new Promise(function(resolve,reject){
     new HttpEvent(uri,function(result){
+      this.status = $this.status;
       (resolve)(result);
     }).run();
   });
@@ -388,6 +462,7 @@ var GetPromise = function(uri){
 var PostPromise = function(uri,data){
   return new Promise(function(resolve,reject){
     new HttpEvent(uri,function(result){
+      this.status = $this.status;
       (resolve)(result);
     },data).run();
   });
