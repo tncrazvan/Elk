@@ -443,7 +443,7 @@ function RECURSIVE76349AAD(target,allowVariables){
 }
 
 var HttpPromise = function(uri){
-  return new HttpGetPromise(uri);
+  return new GetHttpPromise(uri);
 };
 
 var GetHttpPromise = function(uri){
