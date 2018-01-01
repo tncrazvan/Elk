@@ -77,3 +77,4 @@ window.Cookie = function(key, value, path, domain, expire){
     };
 };
 window.AppCookie = window.Cookie;
+window.CookieHandler = window.Cookie;
