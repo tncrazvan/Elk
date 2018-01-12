@@ -763,7 +763,7 @@ function wait(bool,f){
     })();
 }
 
-Array.prototype.clean = function(deleteValue) {
+Array.prototype.remove = function(deleteValue) {
   for (var i = 0; i < this.length; i++) {
     if (this[i] == deleteValue) {
       this.splice(i, 1);
@@ -772,6 +772,7 @@ Array.prototype.clean = function(deleteValue) {
   }
   return this;
 };
+
 
 var getElementOffset = function(element) {
     var top = 0, left = 0;
@@ -952,6 +953,30 @@ function base64ToVideoBlob(string){
 
     var byteArray = new Uint8Array(byteNumbers);
     return new Blob([byteArray], {type: 'video/webm'});
+}
+
+function base64ToBlob(b64Data, contentType, sliceSize) {
+  contentType = contentType || '';
+  sliceSize = sliceSize || 512;
+
+  var byteCharacters = atob(b64Data);
+  var byteArrays = [];
+
+  for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+    var slice = byteCharacters.slice(offset, offset + sliceSize);
+
+    var byteNumbers = new Array(slice.length);
+    for (var i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+
+    var byteArray = new Uint8Array(byteNumbers);
+
+    byteArrays.push(byteArray);
+  }
+
+  var blob = new Blob(byteArrays, {type: contentType});
+  return blob;
 }
 
 Boolean.prototype.btoa = function() {
