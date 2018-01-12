@@ -11,6 +11,9 @@ self.onmessage=function(e){
       postMessage(e.data);
     };
     ws.onclose=function(e){
+      postMessage({
+        disconnect: true
+      });
       console.log("Disconnected from VoiceGroup");
     };
   }else if(e.data.disconnect){
