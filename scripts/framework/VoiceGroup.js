@@ -1,7 +1,7 @@
 /*
 ON JAVA SIDE:
 
-public class VoiceGroup implements WebSocketInterface{
+  public class VoiceGroup implements WebSocketInterface{
     private static boolean sending = false;
     @Override
     public void onOpen(WebSocketEvent e, ArrayList<String> get_data) {
@@ -22,15 +22,16 @@ public class VoiceGroup implements WebSocketInterface{
         System.out.println("Test disconnected.");
     }
 
-}
+  }
 
 */
-VoiceGroup.location = requestMaker.currentJavaScriptRequest
+VoiceGroup.location = requestMaker.currentJavaScriptRequest;
 function VoiceGroup(uri,recordInit,listenInit,mtu){
-
+  var onDisconnect = function(){};
   var recording = recordInit || false;
   var listening = listenInit || false;
   let inputBuffer = new Array();
+  let inputPreBuffer = new Array();
 
   let audioType = 'audio/mpeg; codecs=opus';
   let workerLocation = "";
@@ -51,13 +52,13 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
   var readerInput = new FileReader();
 
   w.onmessage=function(e){
-    readerInput.readAsArrayBuffer(e.data);
-    readerInput.onloadend = function() {
+    if(e.data.disconnect){
+      (onDisconnect)();
+    }else{
       if(listening){
-        inputBuffer.push(new Float32Array(readerInput.result));
+        inputBuffer.push(e.data);
       }
-    };
-
+    }
   };
 
 
@@ -70,9 +71,9 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
 
     var constraints = { audio: true };
     var chunks = [];
-    var BUFF_SIZE = mtu || 1024*4;
+    var BUFF_SIZE = mtu || 1024;
     var audioContext = new AudioContext();
-
+    console.log("BUFFER_SIZE:",BUFF_SIZE);
     navigator.mediaDevices
     .getUserMedia(constraints)
     .then(function(stream) {
@@ -87,16 +88,17 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
 
         if(inputBuffer.length > 0){
 
-          foreach(inputBuffer[0],function(item,i){
-            if(i === 0){
-              output[i] = 0;
-            }else{
-              output[i] = item;
-            }
-
-          });
-          inputBuffer = inputBuffer.splice(1,inputBuffer.length);
-
+          readerInput.readAsArrayBuffer(inputBuffer[0]);
+          readerInput.onloadend = function() {
+            foreach(new Float32Array(readerInput.result),function(item,i){
+              if(i === 0){
+                output[i] = 0;
+              }else{
+                output[i] = item;
+              }
+            });
+            inputBuffer.splice(0,1);
+          };
         }
         if(recording) {
           w.postMessage(input);
@@ -120,7 +122,7 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
 
     })
     .catch(function(err) {
-     console.log('The following error occurred: ' + err);
+     console.error('The following error occurred: ' + err);
    });
   }
 
@@ -152,4 +154,7 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
     });
   };
 
+  this.setOnDisconnect = function(f){
+    onDisconnect = f;
+  };
 }
