@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<!--
 /**
 * ElkPublic is a JavaScript library that makes it easier
 * to manage the HTML of your application and
@@ -20,35 +18,30 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
--->
-<html lang="en">
-  <head>
-    <meta charset="utf-8"/>
-    <title>ElkPublic</title>
-    <!-- manages the order in which the scripts are loaded -->
-    <script type="text/javascript" src="/scripts/framework/include.js"></script>
-  </head>
-  <body>
-    <div id="modules"></div>
-    <div id="main"></div>
 
-    <script type="text/javascript">
-      var loader = new Includer();
-      loader.css([
-        "template"
-      ]);
+function Vocabulary(){
+  this.page={};
+  this.addPage=function(page){
+    this.page[page.name]=page;
+  };
+}
 
-      loader.js([
-        "Project",
-        "framework/Cookie",
-        "framework/Main",
-        "App",
-        //add your scripts before index
-        "framework/Index"
-      ]).then(function(){
-          Project.ready = true;
-          new MainActivity();
-      });
-    </script>
-  </body>
-</html>
+function Page(name){
+  this.name = name;
+  this.phrase={};
+  this.addPhrase=function(label,content){
+    this.phrase[label] = new Phrase(content);
+    return this;
+  };
+};
+
+/*
+example:
+new Word(
+  "it":"contatti",
+  "en":"contacts"
+);
+*/
+function Phrase(content){
+  this.lang = content;
+}
