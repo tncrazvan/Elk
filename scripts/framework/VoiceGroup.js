@@ -26,12 +26,21 @@ ON JAVA SIDE:
 
 */
 VoiceGroup.location = requestMaker.currentJavaScriptRequest;
-function VoiceGroup(uri,recordInit,listenInit,mtu){
+function VoiceGroup(uri,start_recording,start_listening,mtu){
+  const CONNECTED = 0, DISCONNECTED = 1;
+  var $this = this;
   var onDisconnect = function(){};
-  var recording = recordInit || false;
-  var listening = listenInit || false;
+  var onConnect = function(){};
+  var recording = start_recording || false;
+  var listening = start_listening || false;
   let inputBuffer = new Array();
   let inputPreBuffer = new Array();
+  let up_traffic = 0;
+  let down_traffic = 0;
+  var d = new Date();
+  let listeningTime = null;
+  let workerConnected = false;
+
 
   let audioType = 'audio/mpeg; codecs=opus';
   let workerLocation = "";
@@ -48,14 +57,18 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
   });
   let metadata = "data:"+audioType+";base64,";
   let sound = new Audio();
-  var d = new Date();
   var readerInput = new FileReader();
 
   w.onmessage=function(e){
-    if(e.data.disconnect){
+    if(e.data.status === DISCONNECTED){
+      workerConnected = false;
       (onDisconnect)();
+    }else if(e.data.status === CONNECTED){
+      workerConnected = true;
+      (onConnect);
     }else{
-      if(listening){
+      if(listening && workerConnected){
+        down_traffic += e.data.size;
         inputBuffer.push(e.data);
       }
     }
@@ -70,7 +83,6 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
     console.log('getUserMedia supported.');
 
     var constraints = { audio: true };
-    var chunks = [];
     var BUFF_SIZE = mtu || 1024;
     var audioContext = new AudioContext();
     console.log("BUFFER_SIZE:",BUFF_SIZE);
@@ -86,8 +98,7 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
         output = e.outputBuffer.getChannelData(0);
         input = e.inputBuffer.getChannelData(0);
 
-        if(inputBuffer.length > 0){
-
+        if(inputBuffer.length > 0 && workerConnected){
           readerInput.readAsArrayBuffer(inputBuffer[0]);
           readerInput.onloadend = function() {
             foreach(new Float32Array(readerInput.result),function(item,i){
@@ -100,26 +111,19 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
             inputBuffer.splice(0,1);
           };
         }
-        if(recording) {
+        if(recording && workerConnected) {
+          up_traffic +=input.length;
           w.postMessage(input);
         }
+        /*console.log("TRAFFIC:",{
+          total: ((up_traffic+down_traffic)/1024/1024).truncate(1),
+          upload: (up_traffic/1024/1024).truncate(1),
+          download: (down_traffic/1024/1024).truncate(1)
+        });*/
       }
       source.connect(processor);
       processor.connect(node);
       node.connect(audioContext.destination);
-
-
-      (function provide(){
-        if(chunks.length > 0){
-          w.postMessage(chunks[0]);
-
-          chunks = chunks.splice(1,chunks.length);
-        }
-        setTimeout(function(){provide();},0);
-      })();
-
-
-
     })
     .catch(function(err) {
      console.error('The following error occurred: ' + err);
@@ -136,6 +140,7 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
 
   this.startListening=function(){
     listening = true;
+    listeningTime = d.getTime();
   };
 
   this.stopListening=function(){
@@ -143,18 +148,37 @@ function VoiceGroup(uri,recordInit,listenInit,mtu){
   };
 
   this.disconnect=function(){
-    w.postMessage({
-      disconnect:true
-    });
+    $this.stopListening();
+    w.postMessage({disconnect:true});
   };
 
   this.connect=function(uri){
-    w.postMessage({
-      connect:uri
+    w.postMessage({connect:uri});
+  };
+
+  this.reconnect=function(){
+    $this.connect($this.getUri());
+    return new Promise(function(resolve,reject){
+      (function poll(){
+        if(workerConnected){
+          (resolve)(d.getTime());
+        }else{
+          setTimeout(function(){poll();},0);
+        }
+      })();
     });
+
   };
 
   this.setOnDisconnect = function(f){
     onDisconnect = f;
+  };
+
+  this.setOnConnect = function(f){
+    onConnect = f;
+  };
+
+  this.getUri=function(){
+    return uri;
   };
 }
