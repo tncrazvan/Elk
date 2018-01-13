@@ -98,7 +98,7 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
         output = e.outputBuffer.getChannelData(0);
         input = e.inputBuffer.getChannelData(0);
 
-        if(inputBuffer.length > 0 && workerConnected){
+        if(inputBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
           readerInput.readAsArrayBuffer(inputBuffer[0]);
           readerInput.onloadend = function() {
             foreach(new Float32Array(readerInput.result),function(item,i){
