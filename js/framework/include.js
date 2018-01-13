@@ -61,7 +61,7 @@ include.modules = function(list,f){
         (function poll(){
           i++;
           let file = list[i-1]; //without extension
-          new HttpEvent("modules/"+file+".html",function(result){
+          new HttpEvent(workspace+"modules/"+file+".html",function(result){
             tmpModules += result;
             (f)(file);
             if(i<length){
