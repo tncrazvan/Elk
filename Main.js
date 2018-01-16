@@ -127,6 +127,13 @@ function create(tag,content,allowVariables){
       if(isElement(content)){
         element.innerHTML = "";
         element.appendChild(content);
+      }else if(content.constructor.name === "Array"){
+        if(content.length > 0){
+          element.innerHTML = "";
+          foreach(content,function(item){
+            element.appendChild(item);
+          });
+        }
       }else{
         element.applyHtml(content,allowVariables);
       }
