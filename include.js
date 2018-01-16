@@ -19,7 +19,6 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-console.log(document.body);
 Project.workspace='';
 Project.ready = false;
 
