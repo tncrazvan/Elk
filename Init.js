@@ -1,14 +1,18 @@
-window.loader = new Includer();
+window.loader = new Includer({
+  css: "/ElkServer/css/",
+  js: "/ElkServer/js/",
+  modules: "/ElkServer/modules/"
+});
 loader.css([
   //"style"
 ]);
 
 loader.js([
-  "ElkServer/Elk/Project",
-  "ElkServer/Elk/Cookie",
-  "ElkServer/Elk/Main",
-  "ElkServer/Elk/App",
-  "ElkServer/Elk//Index"
+  "Elk/Project",
+  "Elk/Cookie",
+  "Elk/Main",
+  "Elk/App",
+  "Elk//Index"
 ]).then(function(){
     window.modules = create("div");
     window.modules.style.display="none";
