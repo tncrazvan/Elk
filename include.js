@@ -90,7 +90,7 @@ include.module = function(dir,list,f){
 };
 
 include.css = function(dir,list,f){
-  if(dir === "") dir = "/assets/css/";
+  if(dir === "") dir = "/css/";
   if(dir[dir.length-1] !== "/"){
     dir +="/";
   }
