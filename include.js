@@ -25,23 +25,28 @@ Project.ready = false;
 function Project(){}
 window.workspace = Project.workspace;
 
-function Includer(){
+function Includer(dir){
+  dir = dir || {
+    css: "",
+    js: "",
+    modules: ""
+  };
   var $this = this;
   this.currentModuleRequest = null;
   this.currentCSSRequest = null;
   this.currentJavaScriptRequest = null;
   this.js=function(value){
-    return include.js(value,function(file){
+    return include.js(dir.js,value,function(file){
       $this.currentJavaScriptRequest = file;
     });
   };
   this.css=function(value){
-    return include.css(value,function(file){
+    return include.css(dir.css,value,function(file){
       $this.currentCSSRequest = file;
     });
   };
   this.module=function(value){
-    return include.module(value,function(mod){
+    return include.module(dir.modules,value,function(mod){
       $this.currentModuleRequest = mod;
     });
   };
@@ -49,7 +54,11 @@ function Includer(){
 
 function include(){}
 
-include.modules = function(list,f){
+include.modules = function(dir,list,f){
+  if(dir === "") dir = "/modules/";
+  if(dir[dir.length-1] !== "/"){
+    dir +="/";
+  }
   f = f || function(){};
   if(list.constructor !== Array){
     return include.modules([list]);
@@ -61,7 +70,7 @@ include.modules = function(list,f){
         (function poll(){
           i++;
           let file = list[i-1]; //without extension
-          new HttpEvent(workspace+"modules/"+file+".html",function(result){
+          new HttpEvent(dir+file+".html",function(result){
             tmpModules += result;
             (f)(file);
             if(i<length){
@@ -76,11 +85,15 @@ include.modules = function(list,f){
     });
   }
 };
-include.module = function(list,f){
-  return include.modules(list,f);
+include.module = function(dir,list,f){
+  return include.modules(dir,list,f);
 };
 
-include.css = function(list,f){
+include.css = function(dir,list,f){
+  if(dir === "") dir = "/assets/css/";
+  if(dir[dir.length-1] !== "/"){
+    dir +="/";
+  }
   f = f || function(){};
   if(list.constructor !== Array){
     return include.css([list]);
@@ -97,7 +110,7 @@ include.css = function(list,f){
           if(file.charAt(0)==="@"){
             style.setAttribute("href",(file.replace("@","")));
           }else{
-            style.setAttribute("href",workspace+"css/"+file+".css");
+            style.setAttribute("href",dir+file+".css");
           }
           document.head.appendChild(style);
           style.onload=function(){
@@ -114,7 +127,11 @@ include.css = function(list,f){
   }
 };
 
-include.js = function(list,f){
+include.js = function(dir,list,f){
+  if(dir === "") dir = "/js/";
+  if(dir[dir.length-1] !== "/"){
+    dir +="/";
+  }
   f = f || function(){};
   if(list.constructor !== Array){
     return include.js([list]);
@@ -132,7 +149,7 @@ include.js = function(list,f){
           if(file.charAt(0)==="@"){
             script.setAttribute("src",(file.replace("@","")));
           }else{
-            script.setAttribute("src",workspace+"js/"+file+".js");
+            script.setAttribute("src",dir+file+".js");
           }
           document.body.appendChild(script);
           script.onload=function(){
