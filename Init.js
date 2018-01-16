@@ -4,11 +4,11 @@ loader.css([
 ]);
 
 loader.js([
-  "Elk/Project",
-  "Elk/Cookie",
-  "Elk/Main",
-  "Elk/App",
-  "Elk//Index"
+  "ElkServer/Elk/Project",
+  "ElkServer/Elk/Cookie",
+  "ElkServer/Elk/Main",
+  "ElkServer/Elk/App",
+  "ElkServer/Elk//Index"
 ]).then(function(){
     window.modules = create("div");
     window.modules.style.display="none";
