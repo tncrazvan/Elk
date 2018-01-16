@@ -18,6 +18,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
 /*
 ON JAVA SIDE:
 
@@ -45,7 +46,6 @@ ON JAVA SIDE:
   }
 
 */
-VoiceGroup.location = requestMaker.currentJavaScriptRequest;
 function VoiceGroup(uri,start_recording,start_listening,mtu){
   const CONNECTED = 0, DISCONNECTED = 1;
   var $this = this;
@@ -64,14 +64,14 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
 
   let audioType = 'audio/mpeg; codecs=opus';
   let workerLocation = "";
-  foreach(VoiceGroup.location.split("/"),function(node,i,isLast){
+  foreach(requestMaker.currentJavaScriptRequest.split("/"),function(node,i,isLast){
     if(isLast){
       workerLocation +="/VoiceGroupWorker.js";
     }else{
       workerLocation +="/"+node
     }
   });
-  let w = new Worker(workerLocation);
+  let w = new Worker(requestMaker.currentJavaScriptRequest);
   w.postMessage({
     connect:uri
   });

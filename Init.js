@@ -1,6 +1,6 @@
-var loader = new Includer();
+window.loader = new Includer();
 loader.css([
-  "template"
+  //"style"
 ]);
 
 loader.js([
