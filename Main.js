@@ -108,7 +108,17 @@ function isElement(obj) {
 }
 
 function create(tag,content,allowVariables){
-    var element = document.createElement(tag);
+    tag = tag.split(".");
+    var element;
+    foreach(tag,function(item,i,isLast){
+      if(i === 0)
+        element = document.createElement(tag[i])
+      else{
+        element.className +=tag[i];
+        if(!isLast)
+          element.className +=" ";
+      }
+    });
     if(isset(content)){
       if(isElement(content)){
         element.innerHTML = "";
