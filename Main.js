@@ -111,9 +111,13 @@ function create(tag,content,allowVariables){
     tag = tag.split(".");
     var element;
     foreach(tag,function(item,i,isLast){
-      if(i === 0)
-        element = document.createElement(tag[i])
-      else{
+      if(i === 0){
+        tmp = tag[i].split("#");
+        element = document.createElement(tmp[0]);
+        if(tmp.length > 1){
+          window[tmp[1]] = element;
+        }
+      }else{
         element.className +=tag[i];
         if(!isLast)
           element.className +=" ";
