@@ -46,6 +46,8 @@ ON JAVA SIDE:
   }
 
 */
+
+VoiceGroup.location = requestMaker.currentJavaScriptRequest;
 function VoiceGroup(uri,start_recording,start_listening,mtu){
   const CONNECTED = 0, DISCONNECTED = 1;
   var $this = this;
@@ -64,14 +66,14 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
 
   let audioType = 'audio/mpeg; codecs=opus';
   let workerLocation = "";
-  foreach(requestMaker.currentJavaScriptRequest.split("/"),function(node,i,isLast){
+  foreach(VoiceGroup.location.split("/"),function(node,i,isLast){
     if(isLast){
-      workerLocation +="/VoiceGroupWorker.js";
+      workerLocation +="VoiceGroupWorker.js";
     }else{
-      workerLocation +="/"+node
+      workerLocation +=node+"/"
     }
   });
-  let w = new Worker(requestMaker.currentJavaScriptRequest);
+  let w = new Worker(workerLocation);
   w.postMessage({
     connect:uri
   });
@@ -89,7 +91,7 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
     }else{
       if(listening && workerConnected){
         down_traffic += e.data.size;
-        inputBuffer.push(e.data);
+        inputPreBuffer.push(e.data);
       }
     }
   };
@@ -113,12 +115,41 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
       var source = audioContext.createMediaStreamSource(stream);
       var node = source.context.createGain(BUFF_SIZE, 1, 1);
       var processor = source.context.createScriptProcessor(BUFF_SIZE,1,1);
-      let output,input;
+      let output,input, currentData = new Array();
+
+      (function poll(){
+        if(inputPreBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
+          readerInput.readAsArrayBuffer(inputPreBuffer[0]);
+          readerInput.onloadend = function(){
+            currentData = new Float32Array(readerInput.result);
+            /*foreach(new Float32Array(readerInput.result),function(item,i){
+              if(i === 0){
+                currentData[i] = 0;
+              }else{
+                currentData[i] = item;
+              }
+            });*/
+            inputPreBuffer.splice(0,1)
+            setTimeout(function(){poll()},0);
+          };
+        }else{
+          setTimeout(function(){poll()},0);
+        }
+      })();
+
       processor.onaudioprocess = function(e){
         output = e.outputBuffer.getChannelData(0);
         input = e.inputBuffer.getChannelData(0);
 
-        if(inputBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
+        foreach(currentData,function(item,i){
+          if(i === 0){
+            output[i] = 0;
+          }else{
+            output[i] = item;
+          }
+        });
+
+        /*if(inputBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
           readerInput.readAsArrayBuffer(inputBuffer[0]);
           readerInput.onloadend = function() {
             foreach(new Float32Array(readerInput.result),function(item,i){
@@ -130,7 +161,7 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
             });
             inputBuffer.splice(0,1);
           };
-        }
+        }*/
         if(recording && workerConnected) {
           up_traffic +=input.length;
           w.postMessage(input);
