@@ -121,8 +121,12 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
         if(inputPreBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
           readerInput.readAsArrayBuffer(inputPreBuffer[0]);
           readerInput.onloadend = function(){
-            inputBuffer.push(new Float32Array(readerInput.result));
-            inputPreBuffer.splice(0,1)
+            try{
+              inputBuffer.push(new Float32Array(readerInput.result));
+            }catch(exception){
+              console.log("exception:"+exception);
+            }
+            inputPreBuffer.splice(0,1);
             setTimeout(function(){poll()},0);
           };
         }else{
@@ -138,7 +142,11 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
           foreach(inputBuffer[0],function(item,i){
             output[i] = (i===0?0:item);
           });
-          inputBuffer.splice(0,1)
+          if(inputBuffer.length > 10){
+            inputBuffer.splice(0,9);
+          }else{
+            inputBuffer.splice(0,1);
+          }
           console.log(inputBuffer.length);
         }
 
