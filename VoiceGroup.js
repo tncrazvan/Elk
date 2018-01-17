@@ -115,20 +115,13 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
       var source = audioContext.createMediaStreamSource(stream);
       var node = source.context.createGain(BUFF_SIZE, 1, 1);
       var processor = source.context.createScriptProcessor(BUFF_SIZE,1,1);
-      let output,input, currentData = new Array();
+      let output, input;
 
       (function poll(){
         if(inputPreBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
           readerInput.readAsArrayBuffer(inputPreBuffer[0]);
           readerInput.onloadend = function(){
-            currentData = new Float32Array(readerInput.result);
-            /*foreach(new Float32Array(readerInput.result),function(item,i){
-              if(i === 0){
-                currentData[i] = 0;
-              }else{
-                currentData[i] = item;
-              }
-            });*/
+            inputBuffer.push(new Float32Array(readerInput.result));
             inputPreBuffer.splice(0,1)
             setTimeout(function(){poll()},0);
           };
@@ -141,13 +134,13 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
         output = e.outputBuffer.getChannelData(0);
         input = e.inputBuffer.getChannelData(0);
 
-        foreach(currentData,function(item,i){
-          if(i === 0){
-            output[i] = 0;
-          }else{
-            output[i] = item;
-          }
-        });
+        if(inputBuffer.length > 0){
+          foreach(inputBuffer[0],function(item,i){
+            output[i] = (i===0?0:item);
+          });
+          inputBuffer.splice(0,1)
+          console.log(inputBuffer.length);
+        }
 
         /*if(inputBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
           readerInput.readAsArrayBuffer(inputBuffer[0]);
@@ -162,6 +155,7 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
             inputBuffer.splice(0,1);
           };
         }*/
+
         if(recording && workerConnected) {
           up_traffic +=input.length;
           w.postMessage(input);
