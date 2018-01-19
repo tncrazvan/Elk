@@ -165,3 +165,20 @@ include.js = function(dir,list,f){
     });
   }
 };
+
+function initElk(dir){
+  let includer = new Includer(dir);
+  includer.js([
+    "Elk/Project",
+    "Elk/Cookie",
+    "Elk/Main",
+    "Elk/Index",
+    "App"
+  ]).then(function(){
+    window.modules = create("div");
+    window.modules.style.display="none";
+    document.body.appendChild(window.modules);
+    Project.ready = true;
+    new MainActivity();
+  });
+}
