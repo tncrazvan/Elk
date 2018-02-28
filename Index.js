@@ -19,8 +19,8 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-function MainActivity(){
-    (function Activity(){
+function Activity(){
+    (function(){
         document.session={};
         modules.style.display="none";
         App(getJobLocation());
