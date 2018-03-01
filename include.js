@@ -55,6 +55,7 @@ function Includer(dir){
 function include(){}
 window.modules = document.createElement("div");
 window.modules.setAttribute("id","modules");
+document.body.appendChild(window.modules);
 include.modules = function(dir,list,f){
   if(dir === "") dir = "/modules/";
   if(dir[dir.length-1] !== "/"){
