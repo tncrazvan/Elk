@@ -24,7 +24,11 @@ Project.ready = false;
 
 function Project(){}
 window.workspace = Project.workspace;
-
+window.use = new Includer({
+  "modules":"/modules",
+  "js":"/js",
+  "css":"/css"
+});
 function Includer(dir){
   dir = dir || {
     css: "",

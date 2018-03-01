@@ -47,7 +47,7 @@ ON JAVA SIDE:
 
 */
 
-VoiceGroup.location = requestMaker.currentJavaScriptRequest;
+VoiceGroup.location = use.currentJavaScriptRequest;
 function VoiceGroup(uri,start_recording,start_listening,mtu){
   const CONNECTED = 0, DISCONNECTED = 1;
   var $this = this;
