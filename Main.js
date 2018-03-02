@@ -598,8 +598,13 @@ function go(link, onready, target) {
 
 //basically does the same thing as go(ling, onready, target), but it's more straight forward
 function setContent(uri,target,changeState,allowVariables){
+  let prepend = "/@";
+  if(uri.substr(0,"file:".length).toLocaleLowerCase() === "file:"){
+    prepend = "";
+    uri = uri.substr("file:".length);
+  }
   return new Promise(function(resolve,reject){
-    new HttpEvent("/@"+uri,function(result,status){
+    new HttpEvent(prepend+uri,function(result,status){
       if(status === HttpEvent.STATUS_SUCCESS){
         if(isset(changeState)){
           if(changeState){
