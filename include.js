@@ -60,7 +60,7 @@ function include(){}
 window.modules = document.createElement("div");
 window.modules.setAttribute("id","modules");
 window.modules.style.display="none";
-document.body.appendChild(window.modules);
+document.documentElement.appendChild(window.modules);
 include.modules = function(dir,list,f){
   if(dir === "") dir = "/modules/";
   if(dir[dir.length-1] !== "/"){
