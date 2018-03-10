@@ -54,6 +54,22 @@ function Includer(dir){
       $this.currentModuleRequest = mod;
     });
   };
+  this.elk=function(dir){
+    return new Promise(function(resolve,reject){
+      $this.js([
+        dir+"Project",
+        dir+"Cookie",
+        dir+"Main"
+      ]).then(function(){
+        window.modules = create("div");
+        window.modules.style.display="none";
+        document.body.appendChild(window.modules);
+        Project.ready = true;
+        (resolve)();
+      });
+    });
+  };
+
 };
 
 function include(){}
@@ -172,20 +188,3 @@ include.js = function(dir,list,f){
     });
   }
 };
-
-function initElk(dir){
-  let includer = new Includer(dir);
-  includer.js([
-    "Elk/Project",
-    "Elk/Cookie",
-    "Elk/Main",
-    "Elk/Index",
-    "App"
-  ]).then(function(){
-    window.modules = create("div");
-    window.modules.style.display="none";
-    document.body.appendChild(window.modules);
-    Project.ready = true;
-    new MainActivity();
-  });
-}
