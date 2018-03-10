@@ -53,7 +53,7 @@ function Includer(dir){
     return include.module(dir.modules,value,function(mod){
       $this.currentModuleRequest = mod;
     });
-  };
+  };this.modules = this.module;
   this.elk=function(dir){
     return new Promise(function(resolve,reject){
       $this.js([
@@ -78,113 +78,112 @@ window.modules.setAttribute("id","modules");
 window.modules.style.display="none";
 document.documentElement.appendChild(window.modules);
 include.modules = function(dir,list,f){
+  if(typeof list =="string")
+    list = [list];
+
   if(dir === "") dir = "/modules/";
   if(dir[dir.length-1] !== "/"){
     dir +="/";
   }
   f = f || function(){};
-  if(list.constructor !== Array){
-    return include.modules([list]);
-  }else{
-    return new Promise(function(resolve,reject){
-      let tmpModules = '';
-      let i = 0, length = list.length;
-      if(length>0){
-        (function poll(){
-          i++;
-          let file = list[i-1]; //without extension
-          new HttpEvent(dir+file+".html",function(result){
-            tmpModules += result;
-            (f)(file);
-            if(i<length){
-              poll();
-            }else{
-              modules.applyHtml(tmpModules,true);
-              (resolve)();
-            }
-          }).run();
-        })();
-      }
-    });
-  }
+
+  return new Promise(function(resolve,reject){
+    let tmpModules = '';
+    let i = 0, length = list.length;
+    if(length>0){
+      (function poll(){
+        i++;
+        let file = list[i-1]; //without extension
+        new HttpEvent(dir+file+".html",function(result){
+          tmpModules += result;
+          (f)(file);
+          if(i<length){
+            poll();
+          }else{
+            modules.applyHtml(tmpModules,true);
+            (resolve)();
+          }
+        }).run();
+      })();
+    }
+  });
 };
-include.module = function(dir,list,f){
-  return include.modules(dir,list,f);
-};
+include.module = include.modules;
 
 include.css = function(dir,list,f){
+  if(typeof list =="string")
+    list = [list];
+
   if(dir === "") dir = "/css/";
   if(dir[dir.length-1] !== "/"){
     dir +="/";
   }
   f = f || function(){};
-  if(list.constructor !== Array){
-    return include.css([list]);
-  }else{
-    return new Promise(function(resolve,reject){
-      let i = 0, length = list.length;
-      if(length>0){
-        (function poll(){
-          i++;
-          let file = list[i-1]; //without extension
-          let style = document.createElement("link");
-          style.setAttribute("rel","stylesheet");
-          style.setAttribute("type","text/css");
-          if(file.charAt(0)==="@"){
-            style.setAttribute("href",(file.replace("@","")));
+
+  return new Promise(function(resolve,reject){
+    let i = 0, length = list.length;
+    if(length>0){
+      (function poll(){
+        i++;
+        let file = list[i-1]; //without extension
+        let style = document.createElement("link");
+        style.setAttribute("rel","stylesheet");
+        style.setAttribute("type","text/css");
+        if(file.charAt(0)==="@"){
+          style.setAttribute("href",(file.replace("@","")));
+        }else{
+          style.setAttribute("href",dir+file+".css");
+        }
+        document.head.appendChild(style);
+        style.onload=function(){
+          (f)(style.getAttribute("href"));
+          if(i<length){
+            poll();
           }else{
-            style.setAttribute("href",dir+file+".css");
+            (resolve)();
           }
-          document.head.appendChild(style);
-          style.onload=function(){
-            (f)(style.getAttribute("href"));
-            if(i<length){
-              poll();
-            }else{
-              (resolve)();
-            }
-          };
-        })();
-      }
-    });
-  }
+        };
+      })();
+    }
+  });
+
 };
 
 include.js = function(dir,list,f){
+  if(typeof list =="string")
+    list = [list];
+
   if(dir === "") dir = "/js/";
   if(dir[dir.length-1] !== "/"){
     dir +="/";
   }
   f = f || function(){};
-  if(list.constructor !== Array){
-    return include.js([list]);
-  }else{
-    return new Promise(function(resolve,reject){
-      let i = 0, length = list.length;
-      if(list.constructor === Array && length>0){
-        (function poll(){
-          i++;
 
-          let file = list[i-1]; //without extension
-          let script = document.createElement("script");
-          script.setAttribute("type","text/javascript");
-          script.setAttribute("charset","UTF-8");
-          if(file.charAt(0)==="@"){
-            script.setAttribute("src",(file.replace("@","")));
+  return new Promise(function(resolve,reject){
+    let i = 0, length = list.length;
+    if(list.constructor === Array && length>0){
+      (function poll(){
+        i++;
+
+        let file = list[i-1]; //without extension
+        let script = document.createElement("script");
+        script.setAttribute("type","text/javascript");
+        script.setAttribute("charset","UTF-8");
+        if(file.charAt(0)==="@"){
+          script.setAttribute("src",(file.replace("@","")));
+        }else{
+          script.setAttribute("src",dir+file+".js");
+        }
+        document.body.appendChild(script);
+        script.onload=function(){
+          (f)(script.getAttribute("src"));
+          if(i<length){
+              poll();
           }else{
-            script.setAttribute("src",dir+file+".js");
+            (resolve)();
           }
-          document.body.appendChild(script);
-          script.onload=function(){
-            (f)(script.getAttribute("src"));
-            if(i<length){
-                poll();
-            }else{
-              (resolve)();
-            }
-          };
-        })();
-      }
-    });
-  }
+        };
+      })();
+    }
+  });
 };
