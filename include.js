@@ -25,7 +25,7 @@ Project.ready = false;
 function Project(){}
 window.workspace = Project.workspace;
 window.use = new Includer({
-  "modules":"/modules",
+  "components":"/components",
   "js":"/js",
   "css":"/css"
 });
@@ -33,10 +33,10 @@ function Includer(dir){
   dir = dir || {
     css: "",
     js: "",
-    modules: ""
+    components: ""
   };
   var $this = this;
-  this.currentModuleRequest = null;
+  this.currentComponentRequest = null;
   this.currentCSSRequest = null;
   this.currentJavaScriptRequest = null;
   this.js=function(value){
@@ -49,11 +49,11 @@ function Includer(dir){
       $this.currentCSSRequest = file;
     });
   };
-  this.module=function(value){
-    return include.module(dir.modules,value,function(mod){
-      $this.currentModuleRequest = mod;
+  this.component=function(value){
+    return include.component(dir.components,value,function(mod){
+      $this.currentComponentRequest = mod;
     });
-  };this.modules = this.module;
+  };this.components = this.component;
   this.elk=function(dir){
     return new Promise(function(resolve,reject){
       $this.js([
@@ -61,9 +61,9 @@ function Includer(dir){
         dir+"Cookie",
         dir+"Main"
       ]).then(function(){
-        window.modules = create("div");
-        window.modules.style.display="none";
-        document.body.appendChild(window.modules);
+        window.components = create("div");
+        window.components.style.display="none";
+        document.body.appendChild(window.components);
         Project.ready = true;
         (resolve)();
       });
@@ -73,34 +73,34 @@ function Includer(dir){
 };
 
 function include(){}
-window.modules = document.createElement("div");
-window.modules.setAttribute("id","modules");
-window.modules.style.display="none";
-document.documentElement.appendChild(window.modules);
-include.modules = function(dir,list,f){
+window.components = document.createElement("div");
+window.components.setAttribute("id","components");
+window.components.style.display="none";
+document.documentElement.appendChild(window.components);
+include.components = function(dir,list,f){
   if(typeof list =="string")
     list = [list];
 
-  if(dir === "") dir = "/modules/";
+  if(dir === "") dir = "/components/";
   if(dir[dir.length-1] !== "/"){
     dir +="/";
   }
   f = f || function(){};
 
   return new Promise(function(resolve,reject){
-    let tmpModules = '';
+    let tmpComponents = '';
     let i = 0, length = list.length;
     if(length>0){
       (function poll(){
         i++;
         let file = list[i-1]; //without extension
         new HttpEvent(dir+file+".html",function(result){
-          tmpModules += result;
+          tmpComponents += result;
           (f)(file);
           if(i<length){
             poll();
           }else{
-            modules.applyHtml(tmpModules,true);
+            components.applyHtml(tmpComponents,true);
             (resolve)();
           }
         }).run();
@@ -108,7 +108,7 @@ include.modules = function(dir,list,f){
     }
   });
 };
-include.module = include.modules;
+include.component = include.components;
 
 include.css = function(dir,list,f){
   if(typeof list =="string")
