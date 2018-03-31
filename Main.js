@@ -287,14 +287,20 @@ function HttpEvent(uri,success, other, type, data) {
     };
     this.run = function () {
 
-        var formdata = new FormData();  //new storage for properly formatted json array/object to flush
+        /*var formdata = new FormData();  //new storage for properly formatted json array/object to flush
+
         for (var key in data) {
             try{
-              formdata.append(key, data[key].btoa());
+                if(typeof data[key] === "object"){
+                    console.log(JSON.stringify(data[key]));
+                    formdata.append(key, JSON.stringify(data[key]));
+                }else{
+                    formdata.append(key, data[key]);
+                }
             }catch(e){
-              console.log("Failed btoa() attempt on: "+data[key]);
+              console.log("Failed btoa() attempt on key ("+key+"): ",data[key]);
             }
-        }
+        }*/
 
         var xhr = new XMLHttpRequest();
         //set events here
@@ -365,7 +371,9 @@ function HttpEvent(uri,success, other, type, data) {
               xhr.setRequestHeader(key,requestHeaders[key]);
            }
         }
-        xhr.send(formdata); //run
+        if(typeof data === "object")
+            data = JSON.stringify(data);
+        xhr.send(data); //run
     };
 }
 
