@@ -161,8 +161,8 @@ function Box(tag, $function) {
 
 
 
-function PostHttpEvent(uri,success,data,other){
-  return new HttpEvent(uri,success,other,"POST",data);
+function PostHttpEvent(uri,success,data,other,multipart){
+  return new HttpEvent(uri,success,other,"POST",data,multipart);
 }
 
 //INFORMATINOAL RESPONSES
@@ -240,7 +240,8 @@ function GetHttpEvent(uri,success,other){
   return new HttpEvent(uri,success,other,"GET",{});
 }
 
-function HttpEvent(uri,success, other, type, data) {
+function HttpEvent(uri,success, other, type, data, multipart) {
+    if(!isset(multipart)) multipart = false;
     $this = this;
     this.status;
     this.other = other; //other stuff such as listeners, ecc (check ajax progress listener below for that regard)
@@ -287,20 +288,27 @@ function HttpEvent(uri,success, other, type, data) {
     };
     this.run = function () {
 
-        /*var formdata = new FormData();  //new storage for properly formatted json array/object to flush
+        if(multipart){
+            let formdata = new FormData();  //new storage for properly formatted json array/object to flush
 
-        for (var key in data) {
-            try{
-                if(typeof data[key] === "object"){
-                    console.log(JSON.stringify(data[key]));
-                    formdata.append(key, JSON.stringify(data[key]));
-                }else{
-                    formdata.append(key, data[key]);
+            for (var key in data) {
+                try{
+                    if(typeof data[key] === "object"){
+                        console.log(JSON.stringify(data[key]));
+                        formdata.append(key, JSON.stringify(data[key]));
+                    }else{
+                        formdata.append(key, data[key]);
+                    }
+                }catch(e){
+                  console.log("Failed btoa() attempt on key ("+key+"): ",data[key]);
                 }
-            }catch(e){
-              console.log("Failed btoa() attempt on key ("+key+"): ",data[key]);
             }
-        }*/
+            data = formdata;
+        }else{
+            if(typeof data === "object")
+                data = JSON.stringify(data);
+        }
+
 
         var xhr = new XMLHttpRequest();
         //set events here
@@ -371,8 +379,7 @@ function HttpEvent(uri,success, other, type, data) {
               xhr.setRequestHeader(key,requestHeaders[key]);
            }
         }
-        if(typeof data === "object")
-            data = JSON.stringify(data);
+
         xhr.send(data); //run
     };
 }
@@ -516,8 +523,8 @@ var GetHttpPromise = function(uri){
   return new GetPromise(uri);
 };
 
-var PostHttpPromise = function(uri,data){
-  return new PostPromise(uri,data);
+var PostHttpPromise = function(uri,data,multipart){
+  return new PostPromise(uri,data,multipart);
 };
 
 var GetPromise = function(uri){
@@ -529,12 +536,12 @@ var GetPromise = function(uri){
   });
 };
 
-var PostPromise = function(uri,data){
+var PostPromise = function(uri,data,multipart){
   return new Promise(function(resolve,reject){
     new PostHttpEvent(uri,function(result,status){
       this.status = status;
       (resolve)(result);
-    },data).run();
+    },data,{},multipart).run();
   });
 };
 
