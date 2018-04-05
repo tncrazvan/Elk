@@ -292,15 +292,10 @@ function HttpEvent(uri,success, other, type, data, multipart) {
             let formdata = new FormData();  //new storage for properly formatted json array/object to flush
 
             for (var key in data) {
-                try{
-                    if(typeof data[key] === "object"){
-                        console.log(JSON.stringify(data[key]));
-                        formdata.append(key, JSON.stringify(data[key]));
-                    }else{
-                        formdata.append(key, data[key]);
-                    }
-                }catch(e){
-                  console.log("Failed btoa() attempt on key ("+key+"): ",data[key]);
+                if(typeof data[key] === "object"){
+                    formdata.append(key, JSON.stringify(data[key]));
+                }else{
+                    formdata.append(key, data[key]);
                 }
             }
             data = formdata;
@@ -379,7 +374,6 @@ function HttpEvent(uri,success, other, type, data, multipart) {
               xhr.setRequestHeader(key,requestHeaders[key]);
            }
         }
-
         xhr.send(data); //run
     };
 }
