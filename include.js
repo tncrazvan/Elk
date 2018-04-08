@@ -85,6 +85,7 @@ function include(){}
 window.components = document.createElement("div");
 window.components.setAttribute("id","components");
 window.components.style.display="none";
+window.components.list = {};
 document.documentElement.appendChild(window.components);
 include.components = function(dir,list,f){
   if(typeof list == "string")
@@ -94,23 +95,37 @@ include.components = function(dir,list,f){
   if(dir[dir.length-1] !== "/"){
     dir +="/";
   }
+
   f = f || function(){};
 
   return new Promise(function(resolve,reject){
-    let i = 0, length = list.length;
+    let i = 0, length = list.length, pointers = new Array();
     if(length>0){
       (function poll(){
         i++;
-        let file = list[i-1]; //without extension
+        let file = list[i-1];
+        file = file.replace(/\./g,"/");
         new HttpEvent(dir+file+".html",function(result){
-          window[file] = create("component",result);
-          window[file].setAttribute("id",file);
-          components.appendChild(window[file]);
+          let names = file.split("/");
+          let pointer = window.components.list;
+          for(let j = 0; j<names.length;j++){
+              if(!pointer[names[j]]){
+                  pointer[names[j]] = {};
+              }
+              if(j+1 === names.length){
+                  pointer[names[j]] = create("component",result);
+                  pointers[file] = pointer[names[j]];
+                  components.appendChild(pointers[file]);
+              }
+
+              pointer = pointer[names[j]];
+          }
+
           (f)(file);
           if(i<length){
             poll();
           }else{
-            (resolve)();
+            (resolve)(pointers);
           }
         }).run();
       })();

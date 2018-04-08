@@ -384,11 +384,10 @@ function insertAfter(newNode, referenceNode) {
 
 //this function will parse for inline html variables inside the given #text nodes
 function PARSEVAR55TH72(child){
-    use.components(child.getAttribute("$")).then(function(){
-        //assign content to tmp variable
-        var entity = window[child.getAttribute("$")];
+    let name = child.getAttribute("$").replace(/\./g,"/");
+    use.component(child.getAttribute("$")).then(function(components){
         child.innerHTML = "";
-        child.appendChild(entity);
+        child.appendChild(components[name]);
     });
 
 
