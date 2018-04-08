@@ -114,8 +114,9 @@ include.components = function(dir,list,f){
               }
               if(j+1 === names.length){
                   pointer[names[j]] = create("component",result);
-                  pointers[file] = pointer[names[j]];
-                  components.appendChild(pointers[file]);
+                  pointer[names[j]].setAttribute("name",file);
+                  pointers[list[i-1]] = pointer[names[j]];
+                  components.appendChild(pointers[list[i-1]]);
               }
 
               pointer = pointer[names[j]];

@@ -384,8 +384,8 @@ function insertAfter(newNode, referenceNode) {
 
 //this function will parse for inline html variables inside the given #text nodes
 function PARSEVAR55TH72(child){
-    let name = child.getAttribute("$").replace(/\./g,"/");
-    use.component(child.getAttribute("$")).then(function(components){
+    let name = child.getAttribute("$");
+    use.component(name).then(function(components){
         child.innerHTML = "";
         child.appendChild(components[name]);
     });
@@ -511,6 +511,11 @@ var PostPromise = function(uri,data,multipart){
 var Job = HttpEvent;
 
 function applyHtml(target,data,allowVariables){
+    if(isElement(data)){
+        target.innerHTML = "";
+        target.appendChild(data);
+        return;
+    }
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
