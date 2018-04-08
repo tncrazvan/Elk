@@ -35,6 +35,15 @@ function Includer(dir){
     js: "",
     components: ""
   };
+  this.getComponentsLocation=function(){
+      return dir.components;
+  };
+  this.getJSLocation=function(){
+      return dir.js;
+  };
+  this.getCSSLocation=function(){
+      return dir.css;
+  };
   var $this = this;
   this.currentComponentRequest = null;
   this.currentCSSRequest = null;
@@ -78,7 +87,7 @@ window.components.setAttribute("id","components");
 window.components.style.display="none";
 document.documentElement.appendChild(window.components);
 include.components = function(dir,list,f){
-  if(typeof list =="string")
+  if(typeof list == "string")
     list = [list];
 
   if(dir === "") dir = "/components/";
@@ -88,19 +97,19 @@ include.components = function(dir,list,f){
   f = f || function(){};
 
   return new Promise(function(resolve,reject){
-    let tmpComponents = '';
     let i = 0, length = list.length;
     if(length>0){
       (function poll(){
         i++;
         let file = list[i-1]; //without extension
         new HttpEvent(dir+file+".html",function(result){
-          tmpComponents += result;
+          window[file] = create("component",result);
+          window[file].setAttribute("id",file);
+          components.appendChild(window[file]);
           (f)(file);
           if(i<length){
             poll();
           }else{
-            components.applyHtml(tmpComponents,true);
             (resolve)();
           }
         }).run();

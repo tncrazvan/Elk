@@ -382,46 +382,16 @@ function insertAfter(newNode, referenceNode) {
     referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
 }
 
-//this function will try and find one leaf within
-//the window variables tree (given the "string" path) and return it
-function TMP55341(strings){
-  var tmp,counter=0;
-  for(var key in strings){
-    if (strings.hasOwnProperty(key)){
-      if(counter===0){
-        tmp = window[strings[key]];
-      }else{
-        tmp = tmp[strings[key]];
-      }
-    }
-    counter++;
-  }
-  return tmp;
-}
-
-function GETENTITYHRTY3634FDV(string){
-  return TMP55341(string.substring(0).split(/\./g));
-}
-
-
-
 //this function will parse for inline html variables inside the given #text nodes
 function PARSEVAR55TH72(child){
-  //assign content to tmp variable
-  var entity = GETENTITYHRTY3634FDV(child.getAttribute("$"));
+    use.components(child.getAttribute("$")).then(function(){
+        //assign content to tmp variable
+        var entity = window[child.getAttribute("$")];
+        child.innerHTML = "";
+        child.appendChild(entity);
+    });
 
-  //if it's an object...
-  if(typeof entity === "object"){
-    //"if it has a tag name..." (aka: "if it's a dom element...")
-    if(isset(entity.nodeName)){
-      child.parentNode.insertBefore(entity,child);
-      child.remove();
-    }else{
-      //console.log("This is not a node, but it is an object.");
-      child.innerHTML = JSON.stringify(entity);
-      //console.log(PARSEVAR55TH72.tmpArray[key].substring(1));
-    }
-  }
+
 }
 
 //This function will parse the dom item and replace
