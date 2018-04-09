@@ -19,6 +19,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
 function getJobLocation(){
     var currentLocation = "", i = 0;
     var exp = window.location.pathname.split("/");
@@ -386,8 +387,7 @@ function insertAfter(newNode, referenceNode) {
 function PARSEVAR55TH72(child){
     let name = child.getAttribute("$");
     use.component(name).then(function(components){
-        child.innerHTML = "";
-        child.appendChild(components[name]);
+        child.applyHtml(components[name]);
     });
 
 
@@ -511,11 +511,6 @@ var PostPromise = function(uri,data,multipart){
 var Job = HttpEvent;
 
 function applyHtml(target,data,allowVariables){
-    if(isElement(data)){
-        target.innerHTML = "";
-        target.appendChild(data);
-        return;
-    }
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
@@ -662,120 +657,6 @@ function notify(message) {
     // want to be respectful there is no need to bother them any more.
 }
 
-window.onpopstate = function () {
-    JobLocation = getJobLocation();
-    fx(JobLocation);
-};
-Mouse.leftButtonDown = false;
-Mouse.rightButtonDown = false;
-Mouse.leftButtonDownX = null;
-Mouse.leftButtonDownZ = null;
-document.body.onmousedown = function (event) {
-    e = event || window.event;
-    switch (e.which) {
-        case 1:
-            Mouse.leftButtonDown = true;
-            Mouse.leftButtonDownX = Mouse.position.x;
-            Mouse.leftButtonDownY = Mouse.position.y;
-            break;
-        case 2:
-
-            break;
-        case 3:
-            Mouse.rightButtonDown = true;
-            break;
-        default:
-
-            break;
-    }
-};
-
-document.body.onmouseup = function (event) {
-    e = event || window.event;
-    switch (e.which) {
-        case 1:
-            Mouse.leftButtonDown = false;
-            Mouse.leftButtonDownX = null;
-            Mouse.leftButtonDownY = null;
-            break;
-        case 2:
-
-            break;
-        case 3:
-            Mouse.rightButtonDown = false;
-            break;
-        default:
-
-            break;
-    }
-};
-
-Mouse.position = {x: null, y: null};
-(function () {   //updating mouse position every 10ms
-    document.onmousemove = handleMouseMove;
-    (function poll() {
-        setTimeout(function () {
-            getMousePosition();
-            poll();
-        }, 10);
-    })();
-
-    function handleMouseMove(event) {
-        var dot, eventDoc, doc, body, pageX, pageY;
-
-        event = event || window.event; // IE-ism
-
-        // If pageX/Y aren't available and clientX/Y are,
-        // calculate pageX/Y - logic taken from jQuery.
-        // (This is to support old IE)
-        if (event.pageX == null && event.clientX != null) {
-            eventDoc = (event.target && event.target.ownerDocument) || document;
-            doc = eventDoc.documentElement;
-            body = eventDoc.body;
-
-            event.pageX = event.clientX +
-                    (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
-                    (doc && doc.clientLeft || body && body.clientLeft || 0);
-            event.pageY = event.clientY +
-                    (doc && doc.scrollTop || body && body.scrollTop || 0) -
-                    (doc && doc.clientTop || body && body.clientTop || 0);
-        }
-
-        Mouse.position = {
-            x: event.pageX,
-            y: event.pageY
-        };
-    }
-    function getMousePosition() {
-        pos = Mouse.position;
-        if (!pos) {
-            // We haven't seen any movement yet
-        } else {
-            // Use pos.x and pos.y
-            return pos;
-        }
-    }
-})();
-function Mouse() {}
-
-Keyboard={
-    q: false, w: false, e: false, r: false, t: false, y: false, u: false, i: false, o: false, p: false,
-    a: false, s: false, d: false, f: false, g: false, h: false, j: false, k: false, l: false,
-    z: false, x: false, c: false, v: false, b: false, n: false, m: false,
-    ctrl: false, alt: false, shift: false, space: false, tab: false,
-    1: false, 2: false, 3: false, 4: false, 5: false, 6: false, 7: false, 8: false, 9: false, 0: false,
-    questionMark: false, equal: false, exclamation: false, quotes: false, quote: false, pound: false, dolar:false, euro: false,
-    percent: false, ampersand: false, fSlash: false, bSlash: false, leftParenthesis: false, rightParenthesis: false,
-    leftBracket: false, rightBracket: false, circumflex: false, leftBrace: false, rightBrace: false,
-    at: false, dot: false, comma: false, semicolon: false, hyphen: false, underscore: false, colon: false,
-    esc: false, minus: false, plus: false, star:false, enter: false, del: false, ins: false, end: false,
-    home: false, pageUp: false, pageDown: false, backspace: false, arrowLeft: false, arrowRight: false,
-    arrowUp: false, arrowDown: false, super: false, meta: false,
-    f1: false, f2: false, f3: false, f4: false, f5: false, f6: false, f7: false, f8: false,
-    f9: false, f10: false, f11: false, f12: false
-};
-
-function Keyboard() {};
 
 function wait(bool,f){
     (function poll(){
@@ -1224,3 +1105,228 @@ function Popup(url,title,i) {
     		'top='+i.top+', '+
     		'left='+i.left+'');
 }
+
+
+
+/*
+ INCLUDER STARTS
+ */
+
+/**
+ * ElkPublic is a JavaScript library that makes it easier
+ * to manage the HTML of your application and
+ *  interact with the Java servlet ElkServer.
+ * More details at <https://github.com/tncrazvan/ElkServer/>.
+ * Copyright (C) 2016-2018  Tanase Razvan Catalin
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+Project.workspace='';
+Project.ready = false;
+
+function Project(){}
+window.workspace = Project.workspace;
+window.use = new Includer({
+    "components":"/components",
+    "js":"/js",
+    "css":"/css"
+});
+function Includer(dir){
+    dir = dir || {
+        css: "",
+        js: "",
+        components: ""
+    };
+    this.getComponentsLocation=function(){
+        return dir.components;
+    };
+    this.getJSLocation=function(){
+        return dir.js;
+    };
+    this.getCSSLocation=function(){
+        return dir.css;
+    };
+    var $this = this;
+    this.currentComponentRequest = null;
+    this.currentCSSRequest = null;
+    this.currentJavaScriptRequest = null;
+    this.js=function(value){
+        return include.js(dir.js,value,function(file){
+            $this.currentJavaScriptRequest = file;
+        });
+    };
+    this.css=function(value){
+        return include.css(dir.css,value,function(file){
+            $this.currentCSSRequest = file;
+        });
+    };
+    this.component=function(value){
+        return include.component(dir.components,value,function(mod){
+            $this.currentComponentRequest = mod;
+        });
+    };this.components = this.component;
+    this.elk=function(dir){
+        return new Promise(function(resolve,reject){
+            $this.js([
+                dir+"Project",
+                dir+"Cookie",
+                dir+"Main"
+            ]).then(function(){
+                window.components = create("div");
+                window.components.style.display="none";
+                document.body.appendChild(window.components);
+                Project.ready = true;
+                (resolve)();
+            });
+        });
+    };
+
+};
+
+function include(){}
+window.components = document.createElement("components");
+window.components.style.display="none";
+window.components.list = {};
+window.components.tmp = "";
+document.documentElement.appendChild(window.components);
+include.components = function(dir,list,f){
+    if(typeof list == "string")
+        list = [list];
+
+    if(dir === "") dir = "/components/";
+    if(dir[dir.length-1] !== "/"){
+        dir +="/";
+    }
+
+    f = f || function(){};
+
+    return new Promise(function(resolve,reject){
+        let i = 0, length = list.length, pointers = new Array();
+        if(length>0){
+            (function poll(){
+                i++;
+                let file = list[i-1];
+                new HttpEvent(dir+file+".html",function(result){
+                    window.components.tmp += result;
+                    let names = file.split("/");
+                    let pointer = window.components.list;
+                    for(let j = 0; j<names.length;j++){
+                        if(!pointer[names[j]]){
+                            pointer[names[j]] = {};
+                        }
+                        if(j+1 === names.length){
+                            pointer[names[j]] = create("component",result);
+                            pointers[list[i-1]] = pointer[names[j]];
+                        }
+
+                        pointer = pointer[names[j]];
+                    }
+
+                    (f)(file);
+                    if(i<length){
+                        poll();
+                    }else{
+                        window.components.appendChild(pointer);
+                        (resolve)(pointers);
+                    }
+                }).run();
+            })();
+        }
+    });
+};
+include.component = include.components;
+
+include.css = function(dir,list,f){
+    if(typeof list =="string")
+        list = [list];
+
+    if(dir === "") dir = "/css/";
+    if(dir[dir.length-1] !== "/"){
+        dir +="/";
+    }
+    f = f || function(){};
+
+    return new Promise(function(resolve,reject){
+        let i = 0, length = list.length;
+        if(length>0){
+            (function poll(){
+                i++;
+                let file = list[i-1]; //without extension
+                let style = document.createElement("link");
+                style.setAttribute("rel","stylesheet");
+                style.setAttribute("type","text/css");
+                if(file.charAt(0)==="@"){
+                    style.setAttribute("href",(file.replace("@","")));
+                }else{
+                    style.setAttribute("href",dir+file+".css");
+                }
+                document.head.appendChild(style);
+                style.onload=function(){
+                    (f)(style.getAttribute("href"));
+                    if(i<length){
+                        poll();
+                    }else{
+                        (resolve)();
+                    }
+                };
+            })();
+        }
+    });
+
+};
+
+include.js = function(dir,list,f){
+    if(typeof list =="string")
+        list = [list];
+
+    if(dir === "") dir = "/js/";
+    if(dir[dir.length-1] !== "/"){
+        dir +="/";
+    }
+    f = f || function(){};
+
+    return new Promise(function(resolve,reject){
+        let i = 0, length = list.length;
+        if(list.constructor === Array && length>0){
+            (function poll(){
+                i++;
+
+                let file = list[i-1]; //without extension
+                let script = document.createElement("script");
+                script.setAttribute("type","text/javascript");
+                script.setAttribute("charset","UTF-8");
+                if(file.charAt(0)==="@"){
+                    script.setAttribute("src",(file.replace("@","")));
+                }else{
+                    script.setAttribute("src",dir+file+".js");
+                }
+                document.body.appendChild(script);
+                script.onload=function(){
+                    (f)(script.getAttribute("src"));
+                    if(i<length){
+                        poll();
+                    }else{
+                        (resolve)();
+                    }
+                };
+            })();
+        }
+    });
+};
+
+
+/*
+INCLUDER ENDS
+ */
