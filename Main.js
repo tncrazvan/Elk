@@ -387,7 +387,8 @@ function insertAfter(newNode, referenceNode) {
 function PARSEVAR55TH72(child){
     let name = child.getAttribute("$");
     use.component(name).then(function(components){
-        child.applyHtml(components[name]);
+        child.innerHTML = "";
+        child.appendChild(components[name]);
     });
 
 
