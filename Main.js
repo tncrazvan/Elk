@@ -1220,12 +1220,15 @@ include.components = function(dir,list,f){
                 i++;
                 let file = list[i-1];
                 new HttpEvent(dir+file+".html",function(result){
+                    //console.log(dir+file);
                     window.components.tmp += result;
                     let names = file.split("/");
                     let pointer = window.components.list;
                     for(let j = 0; j<names.length;j++){
                         if(!pointer[names[j]]){
                             pointer[names[j]] = {};
+                        }else if(j+1 === names.length){
+                            console.warn("Component ",file," has already been set.");
                         }
                         if(j+1 === names.length){
                             pointer[names[j]] = create("component",result);
