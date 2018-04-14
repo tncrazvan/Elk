@@ -385,13 +385,14 @@ function insertAfter(newNode, referenceNode) {
 
 //this function will parse for inline html variables inside the given #text nodes
 function PARSEVAR55TH72(child){
-    let name = child.getAttribute("$");
-    use.component(name).then(function(components){
-        child.innerHTML = "";
-        child.appendChild(components[name]);
+    return new Promise(function(resolve,reject){
+        let name = child.getAttribute("$");
+        use.component(name).then(function(components){
+            child.innerHTML = "";
+            child.appendChild(components[name]);
+            (resolve)();
+        });
     });
-
-
 }
 
 //This function will parse the dom item and replace
@@ -415,68 +416,153 @@ function PARSEVOCABULARY3100JJYT6(item){
 //This function will parse the contents of the given children of the dom and
 //replace its contents with the relative solution in the vocabulary
 function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
-  let scripts = "";
-  foreach(children,function(child){
-    if(child.nodeName[0] !== "#"){
-      if(child.nodeName === "SCRIPT"){
-          //save <script> contents to variable for later use
-          scripts += child.innerHTML;
-      }else if(child.hasAttribute("@")){
-        tmp = child.getAttribute("@").split("/");
-        if(tmp.length === 1){
-          tmp[1] = tmp[0];
-          tmp[0] = "*";
-        }
-        if(tmp.length > 0){
-          try{
-            child.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
-          }catch(error){
-            console.error(error)
-            console.error(tmp);
-          }
+    return new Promise(function(resolve, reject){
+        let i=0,child,busy=false;
+        (function poll(){
+            if(isset(children[i])){
+                child = children[i];
+                if(child.nodeName[0] !== "#"){
+                    if(child.nodeName === "SCRIPT"){
+                        //eval script
+                        eval(child.innerText);
+                    }else if(child.hasAttribute("@")){
+                        tmp = child.getAttribute("@").split("/");
+                        if(tmp.length === 1){
+                            tmp[1] = tmp[0];
+                            tmp[0] = "*";
+                        }
+                        if(tmp.length > 0){
+                            try{
+                                child.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
+                            }catch(error){
+                                console.error(error)
+                                console.error(tmp);
+                            }
 
-        }
-      }else if(child.hasAttribute("$")){
-        PARSEVAR55TH72(child);
-      }else{
-        PARSEVOCABULARYCHILDREN347HHH7J(child.childNodes,allowVariables);
-      }
-    }
-  });
-  if(scripts.trim() !== "") eval(scripts);
+                        }
+                    }else if(child.hasAttribute("$")){
+                        busy = true;
+                        PARSEVAR55TH72(child).then(function(){
+                            busy=false;
+                            if(i < children.length){
+                                i++;
+                                poll();
+                            }else{
+                                (resolve)();
+                            }
+                        });
+                    }else{
+                        busy = true;
+                        PARSEVOCABULARYCHILDREN347HHH7J(child.childNodes,allowVariables).then(function(){
+                            busy=false;
+                            if(i < children.length){
+                                i++;
+                                poll();
+                            }else{
+                                (resolve)();
+                            }
+                        });
+                    }
+                }
+            }
+
+            if(i < children.length){
+                if(!busy){
+                    i++;
+                    poll();
+                }
+            }else{
+                (resolve)();
+            }
+        })();
+    });
+
 }
 
 //iterating through every child node of the provided target
 function RECURSIVE76349AAD(target,allowVariables){
-  let scripts = "";
-  foreach(target.childNodes,function(item){ //iterating through each tag
-      //find <script>
-      if(item.nodeName === "SCRIPT"){
-          //save <script> contents to variable for later use
-          scripts += item.innerHTML;
-      }else if(item.nodeName[0] !== "#"){ //if it's not some type of string or comment...
-        //if this current element has an "id" attribute set to something...
-        if(item.hasAttribute("id")){
-            //...save element on the window object
-            //I'm not directly saving "item" into window because the node
-            //doesn't exist inside the dom at this point,
-            //I need to find the element after it's been created.
-            //"R.id()" will do this for me.
-            window[item.getAttribute("id")] = item;
-        }
-        //check if this item has an attribute named "@"
-        if(item.hasAttribute("@")){
-          PARSEVOCABULARY3100JJYT6(item);
-        }else if(item.hasAttribute("$")){
-          PARSEVAR55TH72(item);
-        }else{ //if it doesn't...
-          //keep going and try to parse its children
-          PARSEVOCABULARYCHILDREN347HHH7J(item.childNodes,allowVariables);
+    let item, i = 0, busy = false;
+    (function poll(){ //iterating through each tag
+        if(isset(target.childNodes[i])){
+            item = target.childNodes[i];
+            //find <script>
+            if(item.nodeName === "SCRIPT"){
+                //eval script
+                eval(item.innerText);
+            }else if(item.nodeName[0] !== "#"){ //if it's not some type of string or comment...
+                //if this current element has an "id" attribute set to something...
+                if(item.hasAttribute("id")){
+                    //...save element on the window object
+                    //I'm not directly saving "item" into window because the node
+                    //doesn't exist inside the dom at this point,
+                    //I need to find the element after it's been created.
+                    //"R.id()" will do this for me.
+                    window[item.getAttribute("id")] = item;
+                }
 
+                if(item.hasAttribute("@")){
+                    //this component is using a Vocabulary
+                    PARSEVOCABULARY3100JJYT6(item);
+                }else if(item.hasAttribute("$")){
+                    //this element is calling a Component
+                    //loading component
+                    busy = true;
+                    PARSEVAR55TH72(item).then(function(){
+                        busy = false;
+                        if(i < target.childNodes.length) {
+                            i++;
+                            poll();
+                        }
+                    });
+                }else{
+                    //keep going and try to parse its children
+                    busy = true;
+                    PARSEVOCABULARYCHILDREN347HHH7J(item.childNodes,allowVariables).then(function(){
+                        busy = false;
+                        if(i < target.childNodes.length) {
+                            i++;
+                            poll();
+                        }
+                    });
+                }
+            }
         }
-      }
-  });
-  if(scripts.trim() !== "") eval(scripts);
+        if(i < target.childNodes.length){
+            if(!busy){
+                i++;
+                poll();
+            }
+        }
+    })();
+    /*foreach(target.childNodes,function(item){ //iterating through each tag
+        //find <script>
+        if(item.nodeName === "SCRIPT"){
+            //save <script> contents to variable for later use
+            eval(item.innerText);
+        }else if(item.nodeName[0] !== "#"){ //if it's not some type of string or comment...
+            //if this current element has an "id" attribute set to something...
+            if(item.hasAttribute("id")){
+                //...save element on the window object
+                //I'm not directly saving "item" into window because the node
+                //doesn't exist inside the dom at this point,
+                //I need to find the element after it's been created.
+                //"R.id()" will do this for me.
+                window[item.getAttribute("id")] = item;
+            }
+
+            if(item.hasAttribute("@")){
+                //this component is using a Vocabulary
+                PARSEVOCABULARY3100JJYT6(item);
+            }else if(item.hasAttribute("$")){
+                //this element is calling a Component
+                //loading component
+                PARSEVAR55TH72(item);
+            }else{
+                //keep going and try to parse its children
+                PARSEVOCABULARYCHILDREN347HHH7J(item.childNodes,allowVariables);
+            }
+        }
+    });*/
 }
 
 var HttpPromise = function(uri){
