@@ -55,6 +55,55 @@ function handleTouchMove(evt) {
     yDown = null;
 };
 
+function showLeftMenu(menu){
+    return new Promise(function(resolve,reject){
+        let x = menu.offsetLeft;
+        if(x >= 0) return;
+        menu.style.zIndex = 4;
+        (function poll(){
+            x += 10;
+            if(x > 0){
+                x = 0;
+            }
+            menu.style.left = Pixel(x);
+            if(x < 0){
+                setTimeout(poll,1);
+            }else{
+                menu.state = 1;
+                (resolve)();
+            }
+        })();
+    });
+};
+
+function hideLeftMenu(menu){
+    return new Promise(function(resolve,reject){
+        let x = menu.offsetLeft;
+        if(x <= -menu.offsetWidth) return;
+        (function poll(){
+            x -= 10;
+            if(x < -menu.offsetWidth){
+                x = -menu.offsetWidth;
+            }
+            menu.style.left = Pixel(x);
+            if(x > -menu.offsetWidth){
+                setTimeout(poll,1);
+            }else{
+                menu.style.zIndex = 0;
+                menu.state = 0;
+                (resolve)();
+            }
+        })();
+    });
+};
+
+function toggleLeftMenu(menu){
+    if(menu.offsetLeft !== 0){
+        return showLeftMenu(menu);
+    }else{
+        return hideLeftMenu(menu);
+    }
+};
 
 swipe.setLeftMenu=function(menu){
     swipe.start=(x,y)=>{
@@ -107,11 +156,9 @@ swipe.setLeftMenu=function(menu){
     swipe.end=function(){
         menu.dxDelta = 0;
         if(menu.state === 1){
-            console.log("menu showing");
-            showMenu();
+            showLeftMenu(menu);
         }else if(menu.state === 0){
-            console.log("menu is hidden");
-            hideMenu();
+            hideLeftMenu(menu);
         }
     };
 
