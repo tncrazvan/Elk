@@ -120,31 +120,36 @@ swipe.setLeftMenu=function(menu){
 
         let dx = x - swipe.start.x;
         
+        if(dx < 20 && dx > -10){
+            return;
+        }
+        
         menu.style.zIndex = 4;
 
-        if(dx >= 0){
-            if(menu.offsetLeft >= 0){
+        if(dx > 0){
+            if(menu.offsetLeft >= 0 || swipe.start.x > menu.offsetLeft+menu.offsetWidth+40){
+                menu.state = 1;
                 return;
             }
-            if(dx >= 25){
-                if(dx > menu.offsetWidth){
-                    dx = menu.offsetWidth;
-                }
+            if(dx >= 40){
                 menu.state = 1;
             }
         }else if(dx < 0){
             if(menu.offsetLeft <= -menu.offsetWidth){
+                menu.state = 0;
                 return;
             }
-            if(dx <= -25){
-                if(dx < -menu.offsetWidth){
-                    dx = -menu.offsetWidth;
-                }
+            if(dx <= -40){
                 menu.state = 0;
             }
         }
-        
-        menu.style.left = Pixel(menu.start.x + dx);
+        let value = menu.start.x + dx;
+        if(value > 0) 
+            value = 0;
+        else if(value < -menu.offsetWidth) 
+            value = -menu.offsetWidth;
+
+        menu.style.left = Pixel(value);
     };
 
     swipe.end=function(){
