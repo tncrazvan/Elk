@@ -154,7 +154,6 @@ swipe.setLeftMenu=function(menu){
             }
             
         }else if(dx < 0){
-            
             if(value < -40){
                 menu.state = 0;
             }
@@ -163,6 +162,8 @@ swipe.setLeftMenu=function(menu){
                 menu.state = 0;
                 return;
             }
+        }else{
+            return;
         }
         
         if(value > 0) 
