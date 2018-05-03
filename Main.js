@@ -1226,9 +1226,9 @@ Project.ready = false;
 function Project(){}
 window.workspace = Project.workspace;
 window.use = new Includer({
-    "components":"/components",
-    "js":"/js",
-    "css":"/css"
+    "components":"components",
+    "js":"js",
+    "css":"css"
 });
 function Includer(dir){
     if(!dir) dir = {
