@@ -129,7 +129,15 @@ swipe.setLeftMenu=function(menu){
  
     
         let dx = x - swipe.start.x;
-        let value = menu.start.x + dx;
+
+        if(dx > 0 && dx < 40){
+            return;
+        }
+        if(dx < 0 && dx > -40){
+            return;
+        }
+
+        let value = menu.start.x + (dx > 0?dx-40:dx+40);
         menu.style.zIndex = 4;
 
         if(dx > 0){
@@ -140,7 +148,6 @@ swipe.setLeftMenu=function(menu){
             if(value >= -menu.offsetWidth+40){
                 menu.state = 1;
             }
-            console.log(dx);
             if(menu.offsetLeft >= 0){
                 menu.state = 1;
                 return;
