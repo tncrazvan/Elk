@@ -106,6 +106,15 @@ function toggleLeftMenu(menu){
 };
 
 swipe.setLeftMenu=function(menu){
+    menu.style.position = "fixed";
+    menu.style.height = Percent(window.screen.availHeight);
+    menu.style.width = "22em";
+    menu.style.left = Pixel(-menu.offsetWidth);
+    menu.style.top = 0;
+    menu.style.overflowX = "hidden";
+    menu.style.overflowY = "auto";
+    menu.style.transition = "width 0.2s";
+
     swipe.start=function(x,y){
         menu.start = {
             x: menu.offsetLeft,
@@ -118,37 +127,37 @@ swipe.setLeftMenu=function(menu){
     swipe.moving=function(x,y){
         if(!swipe.allow) return;
  
-        
-
+    
         let dx = x - swipe.start.x;
-        
-        if(dx > 0 && swipe.start.x > menu.offsetLeft+menu.offsetWidth+40){
-            return;
-        }
-        if(dx < 0 && swipe.start.x > menu.offsetLeft+menu.offsetWidth+100){
-            return;
-        }
-
+        let value = menu.start.x + dx;
         menu.style.zIndex = 4;
 
         if(dx > 0){
-            if(menu.offsetLeft >= 0 || swipe.start.x >= menu.offsetLeft+menu.offsetWidth+40){
+            if(swipe.start.x >= menu.offsetLeft+menu.offsetWidth+40){
+                return;
+            }
+
+            if(value >= -menu.offsetWidth+40){
+                menu.state = 1;
+            }
+            console.log(dx);
+            if(menu.offsetLeft >= 0){
                 menu.state = 1;
                 return;
             }
-            if(dx >= 40){
-                menu.state = 1;
-            }
+            
         }else if(dx < 0){
+            
+            if(value < -40){
+                menu.state = 0;
+            }
+
             if(menu.offsetLeft <= -menu.offsetWidth){
                 menu.state = 0;
                 return;
             }
-            if(dx <= -40){
-                menu.state = 0;
-            }
         }
-        let value = menu.start.x + dx;
+        
         if(value > 0) 
             value = 0;
         else if(value < -menu.offsetWidth) 
