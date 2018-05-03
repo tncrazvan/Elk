@@ -106,15 +106,16 @@ function toggleLeftMenu(menu){
 };
 
 swipe.setLeftMenu=function(menu){
-    swipe.start=(x,y)=>{
+    swipe.start=function(x,y){
         swipe.start.x = x;
         swipe.start.y = y;
     };
-    let dxDelta = 0;
-    swipe.moving=(x,y)=>{
+    menu.dxDelta = 0;
+    swipe.moving=function(x,y){
         if(!swipe.allow) return;
 
-        let dx = (x - swipe.start.x)/20 + menu.dxDelta;
+        //let dx = (x - swipe.start.x)/20 + menu.dxDelta;
+        let dx = x - swipe.start.x;
         if(dx > 0){
             if(menu.state === 0 && swipe.start.x > menu.offsetWidth*.5){
                 return;
@@ -126,10 +127,14 @@ swipe.setLeftMenu=function(menu){
         }
 
 
-        x = menu.offsetLeft+dx;
+        //x = menu.offsetLeft+dx;
+        x = dx;
         menu.style.zIndex = 4;
         if(x >= 0){
-            x = 0;
+            x -= menu.offsetWidth;
+            if(x > 0){
+                x = 0;
+            }
             menu.state = 1;
             menu.dxDelta += -dx;
         }else if(x <= -menu.offsetWidth){
@@ -148,7 +153,6 @@ swipe.setLeftMenu=function(menu){
                 menu.state = 1;
             }
         }
-
 
         menu.style.left = Pixel(x);
     };
