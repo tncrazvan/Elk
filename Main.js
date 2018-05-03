@@ -1226,16 +1226,17 @@ Project.ready = false;
 function Project(){}
 window.workspace = Project.workspace;
 window.use = new Includer({
-    "components":"components/",
-    "js":"js/",
-    "css":"css/"
+    "components":"/components",
+    "js":"/js",
+    "css":"/css"
 });
 function Includer(dir){
-    dir = dir || {
+    if(!dir) dir = {
         css: "",
         js: "",
         components: ""
     };
+    
     this.getComponentsLocation=function(){
         return dir.components;
     };
@@ -1289,10 +1290,10 @@ window.components.list = {};
 window.components.tmp = "";
 document.documentElement.appendChild(window.components);
 include.components = function(dir,list,f){
-    if(typeof list == "string")
+    if(typeof list === "string")
         list = [list];
 
-    if(dir === "") dir = "/components/";
+    if(dir === "") dir = "components/";
     if(dir[dir.length-1] !== "/"){
         dir +="/";
     }
@@ -1339,10 +1340,10 @@ include.components = function(dir,list,f){
 include.component = include.components;
 
 include.css = function(dir,list,f){
-    if(typeof list =="string")
+    if(typeof list === "string")
         list = [list];
 
-    if(dir === "") dir = "/css/";
+    if(dir === "") dir = "css/";
     if(dir[dir.length-1] !== "/"){
         dir +="/";
     }
@@ -1378,10 +1379,10 @@ include.css = function(dir,list,f){
 };
 
 include.js = function(dir,list,f){
-    if(typeof list =="string")
+    if(typeof list === "string")
         list = [list];
 
-    if(dir === "") dir = "/js/";
+    if(dir === "") dir = "js/";
     if(dir[dir.length-1] !== "/"){
         dir +="/";
     }
