@@ -107,7 +107,7 @@ function toggleLeftMenu(menu){
 
 swipe.setLeftMenu=function(menu){
     menu.style.position = "fixed";
-    menu.style.height = Percent(window.screen.availHeight);
+    menu.style.height = Pixel(window.screen.availHeight);
     menu.style.width = "22em";
     menu.style.left = Pixel(-menu.offsetWidth);
     menu.style.top = 0;
