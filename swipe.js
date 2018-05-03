@@ -107,6 +107,10 @@ function toggleLeftMenu(menu){
 
 swipe.setLeftMenu=function(menu){
     swipe.start=function(x,y){
+        menu.start = {
+            x: menu.offsetLeft,
+            y: menu.offsetTop
+        };
         swipe.start.x = x;
         swipe.start.y = y;
     };
@@ -114,51 +118,36 @@ swipe.setLeftMenu=function(menu){
     swipe.moving=function(x,y){
         if(!swipe.allow) return;
 
-        //let dx = (x - swipe.start.x)/20 + menu.dxDelta;
         let dx = x - swipe.start.x;
-        if(dx > 0){
-            if(menu.state === 0 && swipe.start.x > menu.offsetWidth*.5){
-                return;
-            }
-        }else if(dx < 0){
-            if(menu.state === 1 && swipe.start.x > menu.offsetWidth*1.5){
-                return;
-            }
-        }
-
-
-        //x = menu.offsetLeft+dx;
-        x = dx;
+        
         menu.style.zIndex = 4;
-        if(x >= 0){
-            x -= menu.offsetWidth;
-            if(x > 0){
-                x = 0;
-            }
-            menu.state = 1;
-            menu.dxDelta += -dx;
-        }else if(x <= -menu.offsetWidth){
-            x = -menu.offsetWidth;
-            menu.style.zIndex = 0;
-            menu.state = 0;
-            menu.dxDelta += -dx;
-        }
 
-        if(dx < 0){
-            if(x <= -menu.offsetWidth*.1){
-                menu.state = 0;
+        if(dx >= 0){
+            if(menu.offsetLeft >= 0){
+                return;
             }
-        }else if(dx > 0){
-            if(x > -menu.offsetWidth*.9){
+            if(dx >= 25){
+                if(dx > menu.offsetWidth){
+                    dx = menu.offsetWidth;
+                }
                 menu.state = 1;
             }
+        }else if(dx < 0){
+            if(menu.offsetLeft <= -menu.offsetWidth){
+                return;
+            }
+            if(dx <= -25){
+                if(dx < -menu.offsetWidth){
+                    dx = -menu.offsetWidth;
+                }
+                menu.state = 0;
+            }
         }
-
-        menu.style.left = Pixel(x);
+        
+        menu.style.left = Pixel(menu.start.x + dx);
     };
 
     swipe.end=function(){
-        menu.dxDelta = 0;
         if(menu.state === 1){
             showLeftMenu(menu);
         }else if(menu.state === 0){
