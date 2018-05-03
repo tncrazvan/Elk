@@ -118,13 +118,17 @@ swipe.setLeftMenu=function(menu){
     swipe.moving=function(x,y){
         if(!swipe.allow) return;
  
-        if(swipe.start.x > menu.offsetLeft+menu.offsetWidth+40){
-            return;
-        }
+        
 
         let dx = x - swipe.start.x;
         
-        
+        if(dx > 0 && swipe.start.x > menu.offsetLeft+menu.offsetWidth+40){
+            return;
+        }
+        if(dx < 0 && swipe.start.x > menu.offsetLeft+menu.offsetWidth+100){
+            return;
+        }
+
         menu.style.zIndex = 4;
 
         if(dx > 0){
