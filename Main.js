@@ -1236,7 +1236,7 @@ function Includer(dir){
         js: "",
         components: ""
     };
-    
+
     this.getComponentsLocation=function(){
         return dir.components;
     };
@@ -1284,58 +1284,40 @@ function Includer(dir){
 };
 
 function include(){}
-window.components = document.createElement("components");
+window.components = document.createElement("div");
+window.components.setAttribute("id","components");
 window.components.style.display="none";
-window.components.list = {};
-window.components.tmp = "";
 document.documentElement.appendChild(window.components);
 include.components = function(dir,list,f){
-    if(typeof list === "string")
-        list = [list];
+  if(typeof list =="string")
+    list = [list];
 
-    if(dir === "") dir = "components/";
-    if(dir[dir.length-1] !== "/"){
-        dir +="/";
+  if(dir === "") dir = "/components/";
+  if(dir[dir.length-1] !== "/"){
+    dir +="/";
+  }
+  f = f || function(){};
+
+  return new Promise(function(resolve,reject){
+    let tmpModules = '';
+    let i = 0, length = list.length;
+    if(length>0){
+      (function poll(){
+        i++;
+        let file = list[i-1]; //without extension
+        new HttpEvent(dir+file+".html",function(result){
+          tmpModules += result;
+          (f)(file);
+          if(i<length){
+            poll();
+          }else{
+            components.applyHtml(tmpModules,true);
+            (resolve)(file);
+          }
+        }).run();
+      })();
     }
-
-    f = f || function(){};
-
-    return new Promise(function(resolve,reject){
-        let i = 0, length = list.length, pointers = new Array();
-        if(length>0){
-            (function poll(){
-                i++;
-                let file = list[i-1];
-                new HttpEvent(dir+file+".html",function(result){
-                    //console.log(dir+file);
-                    window.components.tmp += result;
-                    let names = file.split("/");
-                    let pointer = window.components.list;
-                    for(let j = 0; j<names.length;j++){
-                        if(!pointer[names[j]]){
-                            pointer[names[j]] = {};
-                        }else if(j+1 === names.length){
-                            console.warn("Component ",file," has already been set.");
-                        }
-                        if(j+1 === names.length){
-                            pointer[names[j]] = create("component",result);
-                            pointers[list[i-1]] = pointer[names[j]];
-                        }
-
-                        pointer = pointer[names[j]];
-                    }
-
-                    (f)(file);
-                    if(i<length){
-                        poll();
-                    }else{
-                        window.components.appendChild(pointer);
-                        (resolve)(pointers);
-                    }
-                }).run();
-            })();
-        }
-    });
+  });
 };
 include.component = include.components;
 
