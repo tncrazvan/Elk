@@ -387,9 +387,7 @@ function insertAfter(newNode, referenceNode) {
 function PARSEVAR55TH72(child){
     return new Promise(function(resolve,reject){
         let name = child.getAttribute("$");
-        use.component(name).then(function(components){
-            child.innerHTML = "";
-            child.appendChild(components[name]);
+        use.component(name).then(function(r){
             (resolve)();
         });
     });
@@ -415,7 +413,7 @@ function PARSEVOCABULARY3100JJYT6(item){
 
 //This function will parse the contents of the given children of the dom and
 //replace its contents with the relative solution in the vocabulary
-function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
+/*function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
     return new Promise(function(resolve, reject){
         let i=0,child,busy=false;
         (function poll(){
@@ -440,17 +438,6 @@ function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
                             }
 
                         }
-                    }else if(child.hasAttribute("$")){
-                        busy = true;
-                        PARSEVAR55TH72(child).then(function(){
-                            busy=false;
-                            if(i < children.length){
-                                i++;
-                                poll();
-                            }else{
-                                (resolve)();
-                            }
-                        });
                     }else{
                         busy = true;
                         PARSEVOCABULARYCHILDREN347HHH7J(child.childNodes,allowVariables).then(function(){
@@ -477,92 +464,43 @@ function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
         })();
     });
 
+}*/
+
+async function parseElement(item,allowVariables){
+    //if this current element has an "id" attribute set to something...
+    if(item.hasAttribute("id")){
+        window[item.getAttribute("id")] = item;
+    }
+    if(item.hasAttribute("@")){
+        //this component is using a Vocabulary
+        PARSEVOCABULARY3100JJYT6(item);
+    }else if(item.hasAttribute("import")){
+        const importName = item.getAttribute("import").split("=>");
+        const componentName = importName[0].trim();
+        const selector = importName[1].trim();
+        const req = await use.component(componentName);
+        item.appendChild(req[componentName].querySelector(selector));
+    }else if(item.children.length > 0){
+        await recursiveParser(item,allowVariables);
+    }
+    
+    if(item.hasAttribute("export")){
+        window[item.getAttribute("export").trim()].appendChild(item);
+    }
 }
 
 //iterating through every child node of the provided target
-function RECURSIVE76349AAD(target,allowVariables){
-    let item, i = 0, busy = false;
-    (function poll(){ //iterating through each tag
-        if(isset(target.childNodes[i])){
-            item = target.childNodes[i];
-            //find <script>
-            if(item.nodeName === "SCRIPT"){
-                //eval script
-                eval(item.innerText);
-            }else if(item.nodeName[0] !== "#"){ //if it's not some type of string or comment...
-                //if this current element has an "id" attribute set to something...
-                if(item.hasAttribute("id")){
-                    //...save element on the window object
-                    //I'm not directly saving "item" into window because the node
-                    //doesn't exist inside the dom at this point,
-                    //I need to find the element after it's been created.
-                    //"R.id()" will do this for me.
-                    window[item.getAttribute("id")] = item;
-                }
-
-                if(item.hasAttribute("@")){
-                    //this component is using a Vocabulary
-                    PARSEVOCABULARY3100JJYT6(item);
-                }else if(item.hasAttribute("$")){
-                    //this element is calling a Component
-                    //loading component
-                    busy = true;
-                    PARSEVAR55TH72(item).then(function(){
-                        busy = false;
-                        if(i < target.childNodes.length) {
-                            i++;
-                            poll();
-                        }
-                    });
-                }else{
-                    //keep going and try to parse its children
-                    busy = true;
-                    PARSEVOCABULARYCHILDREN347HHH7J(item.childNodes,allowVariables).then(function(){
-                        busy = false;
-                        if(i < target.childNodes.length) {
-                            i++;
-                            poll();
-                        }
-                    });
-                }
-            }
+async function recursiveParser(target,allowVariables){
+    foreach(target.children,async child=>{
+        switch(child.tagName){
+            case "SCRIPT":
+                eval(child.innerText);
+            break;
+            default:
+                await parseElement(child,allowVariables);
+            break;
         }
-        if(i < target.childNodes.length){
-            if(!busy){
-                i++;
-                poll();
-            }
-        }
-    })();
-    /*foreach(target.childNodes,function(item){ //iterating through each tag
-        //find <script>
-        if(item.nodeName === "SCRIPT"){
-            //save <script> contents to variable for later use
-            eval(item.innerText);
-        }else if(item.nodeName[0] !== "#"){ //if it's not some type of string or comment...
-            //if this current element has an "id" attribute set to something...
-            if(item.hasAttribute("id")){
-                //...save element on the window object
-                //I'm not directly saving "item" into window because the node
-                //doesn't exist inside the dom at this point,
-                //I need to find the element after it's been created.
-                //"R.id()" will do this for me.
-                window[item.getAttribute("id")] = item;
-            }
-
-            if(item.hasAttribute("@")){
-                //this component is using a Vocabulary
-                PARSEVOCABULARY3100JJYT6(item);
-            }else if(item.hasAttribute("$")){
-                //this element is calling a Component
-                //loading component
-                PARSEVAR55TH72(item);
-            }else{
-                //keep going and try to parse its children
-                PARSEVOCABULARYCHILDREN347HHH7J(item.childNodes,allowVariables);
-            }
-        }
-    });*/
+    });
 }
 
 var HttpPromise = function(uri){
@@ -597,7 +535,7 @@ var PostPromise = function(uri,data,multipart){
 
 var Job = HttpEvent;
 
-function applyHtml(target,data,allowVariables){
+async function applyHtml(target,data,allowVariables){
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
@@ -611,7 +549,7 @@ function applyHtml(target,data,allowVariables){
 
     allowVariables = (isset(allowVariables)?allowVariables:false);
     target.innerHTML = data;
-    RECURSIVE76349AAD(target,allowVariables);
+    await recursiveParser(target,allowVariables);
 }
 
 function foreachChild(children,f){
@@ -920,8 +858,8 @@ Element.prototype.toggleDisplay=function(){
     }
 };
 
-Element.prototype.applyHtml=function(data,allowVariables){
-  applyHtml(this,data,allowVariables);
+Element.prototype.applyHtml=async function(data,allowVariables){
+  await applyHtml(this,data,allowVariables);
 };
 
 Element.prototype.insertChildAtIndex = function(child, index) {
@@ -1265,59 +1203,37 @@ function Includer(dir){
             $this.currentComponentRequest = mod;
         });
     };this.components = this.component;
-    this.elk=function(dir){
-        return new Promise(function(resolve,reject){
-            $this.js([
-                dir+"Project",
-                dir+"Cookie",
-                dir+"Main"
-            ]).then(function(){
-                window.components = create("div");
-                window.components.style.display="none";
-                document.body.appendChild(window.components);
-                Project.ready = true;
-                (resolve)();
-            });
-        });
-    };
 
 };
 
 function include(){}
-window.components = document.createElement("div");
-window.components.setAttribute("id","components");
-window.components.style.display="none";
-document.documentElement.appendChild(window.components);
-include.components = function(dir,list,f){
-  if(typeof list =="string")
+window.components = new Array();
+include.components = async function(dir,list,f){
+    if(typeof list =="string")
     list = [list];
 
-  if(dir === "") dir = "/components/";
-  if(dir[dir.length-1] !== "/"){
+    if(dir === "") dir = "/components/";
+    if(dir[dir.length-1] !== "/"){
     dir +="/";
-  }
-  f = f || function(){};
-
-  return new Promise(function(resolve,reject){
-    let tmpModules = '';
-    let i = 0, length = list.length;
-    if(length>0){
-      (function poll(){
-        i++;
-        let file = list[i-1]; //without extension
-        new HttpEvent(dir+file+".html",function(result){
-          tmpModules += result;
-          (f)(file);
-          if(i<length){
-            poll();
-          }else{
-            components.applyHtml(tmpModules,true);
-            (resolve)(file);
-          }
-        }).run();
-      })();
     }
-  });
+    f = f || function(){};
+    const currentList = new Array();
+    let tmpModules = '';
+    let length = list.length;
+    if(length>0){
+        for(let i = 0; i<length; i++){
+            let file = list[i];
+            const req = await fetch(dir+file+".html");
+            const text = await req.text();
+            const o = create("component",text);
+            o.setAttribute("name",file);
+            components[file] = o;
+            currentList[file] = o;
+            (f)(file,o);
+        }
+        return currentList;
+    }
+    return null;
 };
 include.component = include.components;
 
