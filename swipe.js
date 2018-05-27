@@ -55,13 +55,13 @@ function handleTouchMove(evt) {
     yDown = null;
 };
 
-function showLeftMenu(menu){
+function showLeftMenu(menu,speed = 20){
     return new Promise(function(resolve,reject){
         let x = menu.offsetLeft;
         if(x >= 0) return;
         menu.style.zIndex = 4;
         (function poll(){
-            x += 10;
+            x += speed;
             if(x > 0){
                 x = 0;
             }
@@ -76,12 +76,12 @@ function showLeftMenu(menu){
     });
 };
 
-function hideLeftMenu(menu){
+function hideLeftMenu(menu,speed = 20){
     return new Promise(function(resolve,reject){
         let x = menu.offsetLeft;
         if(x <= -menu.offsetWidth) return;
         (function poll(){
-            x -= 10;
+            x -= speed;
             if(x < -menu.offsetWidth){
                 x = -menu.offsetWidth;
             }
@@ -97,15 +97,15 @@ function hideLeftMenu(menu){
     });
 };
 
-function toggleLeftMenu(menu){
+function toggleLeftMenu(menu,speed = 20){
     if(menu.offsetLeft !== 0){
-        return showLeftMenu(menu);
+        return showLeftMenu(menu,speed);
     }else{
-        return hideLeftMenu(menu);
+        return hideLeftMenu(menu,speed);
     }
 };
 
-swipe.setLeftMenu=function(menu){
+swipe.setLeftMenu=function(menu,speed = 20){
     menu.style.position = "fixed";
     menu.style.height = Percent(100);
     menu.style.width = "22em";
@@ -176,9 +176,9 @@ swipe.setLeftMenu=function(menu){
 
     swipe.end=function(){
         if(menu.state === 1){
-            showLeftMenu(menu);
+            showLeftMenu(menu,speed);
         }else if(menu.state === 0){
-            hideLeftMenu(menu);
+            hideLeftMenu(menu,speed);
         }
     };
 
