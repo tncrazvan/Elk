@@ -479,13 +479,20 @@ async function parseElement(item,allowVariables){
         const componentName = importName[0].trim();
         const selector = importName[1].trim();
         const req = await use.component(componentName);
-        item.appendChild(req[componentName].querySelector(selector));
+        const selected = req[componentName].querySelector(selector);
+        item.appendChild(selected);
+        if(selected.onload){
+            (selected.onload)();
+        }
     }else if(item.children.length > 0){
         await recursiveParser(item,allowVariables);
     }
     
     if(item.hasAttribute("export")){
         window[item.getAttribute("export").trim()].appendChild(item);
+        if(item.onload){
+            (item.onload)();
+        }
     }
 }
 
