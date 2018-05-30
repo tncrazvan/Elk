@@ -518,20 +518,20 @@ var GetHttpPromise = function(uri){
   return new GetPromise(uri);
 };
 
-var PostHttpPromise = function(uri,data,multipart){
-  return new PostPromise(uri,data,multipart);
+var PostHttpPromise = function(uri,data,other,multipart){
+  return new PostPromise(uri,data,other,multipart);
 };
 
-var GetPromise = function(uri){
+var GetPromise = function(uri,other){
   return new Promise(function(resolve,reject){
     new HttpEvent(uri,function(result,status){
       this.status = status;
       (resolve)(result);
-    }).run();
+    },other).run();
   });
 };
 
-var PostPromise = function(uri,data,multipart){
+var PostPromise = function(uri,data,other,multipart){
   return new Promise(function(resolve,reject){
     new PostHttpEvent(uri,function(result,status){
       this.status = status;
