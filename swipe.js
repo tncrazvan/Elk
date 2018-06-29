@@ -7,6 +7,7 @@ window.swipe={
     down: function(){},
     start: function(){},
     moving: function(){},
+    onLeftMenuMove: function(){},
     end: function(){},
     allow: true
 };
@@ -66,6 +67,7 @@ function showLeftMenu(menu,speed = 20){
                 x = 0;
             }
             menu.style.left = Pixel(x);
+            (swipe.onLeftMenuMove)(x);
             if(x < 0){
                 setTimeout(poll,1);
             }else{
@@ -86,6 +88,7 @@ function hideLeftMenu(menu,speed = 20){
                 x = -menu.offsetWidth;
             }
             menu.style.left = Pixel(x);
+            (swipe.onLeftMenuMove)(x);
             if(x > -menu.offsetWidth){
                 setTimeout(poll,1);
             }else{
@@ -113,7 +116,7 @@ swipe.setLeftMenu=function(menu,speed = 20){
     menu.style.top = 0;
     menu.style.overflowX = "hidden";
     menu.style.overflowY = "auto";
-    menu.style.transition = "width 0.2s";
+    //menu.style.transition = "width 0.2s";
 
     swipe.start=function(x,y){
         menu.start = {
@@ -172,6 +175,7 @@ swipe.setLeftMenu=function(menu,speed = 20){
             value = -menu.offsetWidth;
 
         menu.style.left = Pixel(value);
+        (swipe.onLeftMenuMove)(value);
     };
 
     swipe.end=function(){
