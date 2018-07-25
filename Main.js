@@ -1,5 +1,5 @@
 /**
-* ElkPublic is a JavaScript library that makes it easier
+* Elk is a JavaScript library that makes it easier
 * to manage the HTML of your application and
 *  interact with the Java servlet ElkServer.
 * More details at <https://github.com/tncrazvan/ElkServer/>.
@@ -160,12 +160,6 @@ function Box(tag, $function) {
 }
 
 
-
-
-function PostHttpEvent(uri,success,data,other,multipart){
-  return new HttpEvent(uri,success,other,"POST",data,multipart);
-}
-
 //INFORMATINOAL RESPONSES
 HttpEvent.STATUS_CONTINUE = "100 Continue";
 HttpEvent.STATUS_SWITCHING_PROTOCOLS = "101 Switching Protocols";
@@ -237,146 +231,65 @@ HttpEvent.STATUS_LOOP_DETECTED = "508 Loop Detected";
 HttpEvent.STATUS_NOT_EXTENDED = "510 Not Extended";
 HttpEvent.STATUS_NETWORK_AUTHENTICATION_REQUIRED = "511 Network Authentication Required";
 
-function GetHttpEvent(uri,success,other){
-  return new HttpEvent(uri,success,other,"GET",{});
-}
+let GetHttpPromise = function(uri){
+    return new HttpEvent("get:"+uri);
+};
 
-function HttpEvent(uri,success, other, type, data, multipart) {
-    if(!isset(multipart)) multipart = false;
-    $this = this;
-    this.status;
-    this.other = other; //other stuff such as listeners, ecc (check ajax progress listener below for that regard)
-    success = (isset(success) ? success : function () {});
-
-    var url = Project.workspace+uri;
-    var type = isset(type)?type:'GET'; //default transmission method
-    var dataType = 'text/plain';
-    var contentType = 'application/json';
+let PostHttpPromise = function(uri,data,events){
+    return new HttpEvent("post:"+uri,data,events);
+};
 
 
-    this.setUrl = function (value) {
-        url = value;
-    };
+function HttpEvent(uri, data, events) {
+    let method = uri.split(":",true)[0].toUpperCase();
+    uri = uri.substr(method.length+1);
 
-
-    this.setDataType = function (value) {
-        dataType = value;
-    };
-
-    this.setContentType = function (value) {
-        contentType = value;
-    };
-
-    this.getUrl = function () {
-        return url;
-    };
-
-    this.getType = function () {
-        return type;
-    }, this.getMethod = this.getType;
-
-    this.getDataType = function () {
-        return dataType;
-    };
-
-    this.getContentType = function () {
-        return contentType;
-    };
-
-    var requestHeaders = {};
+    let requestHeaders = {};
     this.setRequestHeader=function(headers){
       requestHeaders = headers;
     };
-    this.run = function () {
 
-        if(multipart){
-            let formdata = new FormData();  //new storage for properly formatted json array/object to flush
+    return new Promise(function(resolve,reject){
 
-            for (var key in data) {
-                if(typeof data[key] === "object"){
-                    formdata.append(key, JSON.stringify(data[key]));
-                }else{
-                    formdata.append(key, data[key]);
-                }
-            }
-            data = formdata;
-        }else{
-            if(typeof data === "object")
-                data = JSON.stringify(data);
-        }
+        if(typeof data === "object")
+            data = JSON.stringify(data);
+        
 
 
-        var xhr = new XMLHttpRequest();
+        let xhr = new XMLHttpRequest();
         //set events here
 
 
-        if ($this.other) {
-            for (var key in $this.other) {
-
-            	switch(key){
-            	/**************DOWNLOAD******************/
-                    case "downloadProgress":
-                        xhr.addEventListener('progress', function (event) {
-                            (other[key])(event);
-                        }, false);
-                    break;
-                    case "downloadComplete":
-                        xhr.addEventListener('load', function (event) {
-                            (other[key])(event);
-                        }, false);
-                        break;
-                    case "downloadError":
-                        xhr.addEventListener('error', function (event) {
-                            (other[key])(event);
-                        }, false);
-                        break;
-                    case "downloadAbort":
-                        xhr.addEventListener('abort', function (event) {
-                            (other[key])(event);
-                        }, false);
-                        break;
-            	/*****************UPLOAD***********************/
-                    case "uploadProgress":
-                        xhr.upload.addEventListener('progress', function (event) {
-                            (other[key])(event);
-                        }, false);
-                        break;
-                    case "uploadComplete":
-                        xhr.upload.addEventListener('load', function (event) {
-                            (other[key])(event);
-                        }, false);
-                        break;
-                    case "uploadError":
-                        xhr.upload.addEventListener('error', function (event) {
-                            (other[key])(event);
-                        }, false);
-                        break;
-                    case "uploadAbort":
-                        xhr.upload.addEventListener('abort', function (event) {
-                            (other[key])(event);
-                        }, false);
-                        break;
-
-            	}
-
+        if(events){
+            if (events.download) {
+                for (var key in events.download) {
+                    xhr.addEventListener(key, function (event) {
+                        (events.download[key])(event);
+                    }, false);
+                }
+            }
+            if (events.upload) {
+                for (var key in events.download) {
+                    xhr.upload.addEventListener(key, function (event) {
+                        (events.upload[key])(event);
+                    }, false);
+                }
             }
         }
         xhr.onreadystatechange = function () { //whenever state changes
-            if (this.readyState === 4){ //onready state run
-                $this.status = this.status+" "+this.statusText;
-                (success)(xhr.responseText,$this.status);
+            if (xhr.readyState === 4){
+                (resolve)(xhr);
             }
         };
 
 
-        xhr.open(this.getMethod(), this.getUrl(),true);
+        xhr.open(method,uri,true);
         for (var key in requestHeaders) {
-           if (requestHeaders.hasOwnProperty(key)) {
-              xhr.setRequestHeader(key,requestHeaders[key]);
-           }
+            if (requestHeaders.hasOwnProperty(key))
+                xhr.setRequestHeader(key,requestHeaders[key]);
         }
         xhr.send(data); //run
-    };
+    });
 }
 
 function insertAfter(newNode, referenceNode) {
@@ -410,61 +323,6 @@ function PARSEVOCABULARY3100JJYT6(item){
     }
   }
 }
-
-//This function will parse the contents of the given children of the dom and
-//replace its contents with the relative solution in the vocabulary
-/*function PARSEVOCABULARYCHILDREN347HHH7J(children, allowVariables){
-    return new Promise(function(resolve, reject){
-        let i=0,child,busy=false;
-        (function poll(){
-            if(isset(children[i])){
-                child = children[i];
-                if(child.nodeName[0] !== "#"){
-                    if(child.nodeName === "SCRIPT"){
-                        //eval script
-                        eval(child.innerText);
-                    }else if(child.hasAttribute("@")){
-                        tmp = child.getAttribute("@").split("/");
-                        if(tmp.length === 1){
-                            tmp[1] = tmp[0];
-                            tmp[0] = "*";
-                        }
-                        if(tmp.length > 0){
-                            try{
-                                child.innerHTML = vocabulary.page[tmp[0]].phrase[tmp[1]].lang[localStorage.getItem("language")];
-                            }catch(error){
-                                console.error(error)
-                                console.error(tmp);
-                            }
-
-                        }
-                    }else{
-                        busy = true;
-                        PARSEVOCABULARYCHILDREN347HHH7J(child.childNodes,allowVariables).then(function(){
-                            busy=false;
-                            if(i < children.length){
-                                i++;
-                                poll();
-                            }else{
-                                (resolve)();
-                            }
-                        });
-                    }
-                }
-            }
-
-            if(i < children.length){
-                if(!busy){
-                    i++;
-                    poll();
-                }
-            }else{
-                (resolve)();
-            }
-        })();
-    });
-
-}*/
 
 async function parseElement(item,allowVariables){
     //if this current element has an "id" attribute set to something...
@@ -510,37 +368,8 @@ async function recursiveParser(target,allowVariables){
     });
 }
 
-var HttpPromise = function(uri){
-  return new GetHttpPromise(uri);
-};
 
-var GetHttpPromise = function(uri){
-  return new GetPromise(uri);
-};
 
-var PostHttpPromise = function(uri,data,other,multipart){
-  return new PostPromise(uri,data,other,multipart);
-};
-
-var GetPromise = function(uri,other){
-  return new Promise(function(resolve,reject){
-    new HttpEvent(uri,function(result,status){
-      this.status = status;
-      (resolve)(result);
-    },other).run();
-  });
-};
-
-var PostPromise = function(uri,data,other,multipart){
-  return new Promise(function(resolve,reject){
-    new PostHttpEvent(uri,function(result,status){
-      this.status = status;
-      (resolve)(result);
-    },data,{},multipart).run();
-  });
-};
-
-var Job = HttpEvent;
 
 async function applyHtml(target,data,allowVariables){
     //pushing data to the target
@@ -569,68 +398,6 @@ function foreachChild(children,f){
   });
 }
 
-fx.i = 0;
-fx.delay = 0;
-fx.before = function () {};
-fx.after = function () {};
-fx.target = document.getElementById("main");
-function fx(focus, onready, target) {
-    if(!isset(onready)) onready = function(){};
-    var $this=this;
-    if (!isset(target)) {
-        this.target = fx.target;
-    }else{
-	     this.target = target;
-    }
-    (fx.before)(this.target);
-
-    var j = new HttpEvent("/@"+focus,function(r){
-    	setTimeout(function(){
-            applyHtml($this.target,r);
-            (fx.after)($this.target);
-        },fx.delay);
-
-    });
-
-    j.run();
-}
-
-function go(link, onready, target) {
-	//modifying client url,
-    //this is absolutelly not required, it just refreshes the client's
-    //url in order to let them know their location or be able to copy it
-    history.pushState(null, document.title, Project.workspace + '/' + link);
-	//writes new content (with some flashy animation)
-    fx(link, onready, target);
-	//saves new location
-    window.JobLocation=link;
-}
-
-//basically does the same thing as go(ling, onready, target), but it's more straight forward
-function setContent(uri,target,changeState,allowVariables){
-  let prepend = "/@";
-  if(uri.substr(0,"file:".length).toLocaleLowerCase() === "file:"){
-    prepend = "";
-    uri = uri.substr("file:".length);
-  }
-  return new Promise(function(resolve,reject){
-    new HttpEvent(prepend+uri,function(result,status){
-      if(status === HttpEvent.STATUS_SUCCESS){
-        if(isset(changeState)){
-          if(changeState){
-            history.pushState(null, document.title, Project.workspace + '/' + uri);
-            window.JobLocation=uri;
-          }
-        }
-        target.applyHtml(result,allowVariables);
-      }else{
-        target.applyHtml("Server status message:"+status);
-      }
-      (resolve)();
-    }).run();
-  });
-
-}
 
 //basically does the same thing as go(ling, onready, target), but it's more straight forward
 function file_get_contents(uri){
@@ -1142,27 +909,6 @@ function Popup(url,title,i) {
 
 /*
  INCLUDER STARTS
- */
-
-/**
- * ElkPublic is a JavaScript library that makes it easier
- * to manage the HTML of your application and
- *  interact with the Java servlet ElkServer.
- * More details at <https://github.com/tncrazvan/ElkServer/>.
- * Copyright (C) 2016-2018  Tanase Razvan Catalin
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 Project.workspace='';
