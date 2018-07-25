@@ -8,6 +8,8 @@ window.swipe={
     start: function(){},
     moving: function(){},
     onLeftMenuMove: function(){},
+    onLeftMenuShow: function(){},
+    onLeftMenuHide: function(){},
     end: function(){},
     allow: true
 };
@@ -72,6 +74,7 @@ function showLeftMenu(menu,speed = 20){
                 setTimeout(poll,1);
             }else{
                 menu.state = 1;
+                (swipe.onLeftMenuShow)();
                 (resolve)();
             }
         })();
@@ -94,6 +97,7 @@ function hideLeftMenu(menu,speed = 20){
             }else{
                 menu.style.zIndex = 0;
                 menu.state = 0;
+                (swipe.onLeftMenuHide)();
                 (resolve)();
             }
         })();
