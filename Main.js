@@ -370,7 +370,7 @@ async function recursiveParser(target,includer=window.use){
             case "SCRIPT":
                 eval(child.innerText);
             break;
-            case "SCRIPT":
+            case "STYLE":
                 document.body.appendChild(child);
                 counter++;
             break;
