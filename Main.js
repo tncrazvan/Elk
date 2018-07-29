@@ -415,17 +415,18 @@ async function file_get_contents(uri){
     return (await new GetHttpPromise(uri)).response;
 }
 
-function forevery(array, $function, counter, from, to) {
-    var i;
-    var isLast = false;
+async function forevery(array, $function, counter, from, to) {
+    let i;
+    let isLast = false;
     for (i = (from ? from : 0); i < (to ? to : array.length); i += counter) {
         isLast=!(i+1 < (to ? to : array.length));
-        $function(array[i],i,isLast);
+        await $function(array[i],i,isLast);
     }
+    return;
 }
 
 function foreach(array, $function, from, to) {
-    forevery(array, $function, 1, from, to);
+    return forevery(array, $function, 1, from, to);
 }
 
 function foreachr(array, $function) {
