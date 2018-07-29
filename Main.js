@@ -841,7 +841,7 @@ function Rgba(red,green,blue,alfa){
     return new String("rgba("+red+","+green+","+blue+","+alfa+")");
 }
 
-function Popup(url,title,i) {
+function Popup(url,title="",i={}) {
 
     if(isset(i.toolbar)){
     	if(i.toolbar) i.toolbar = 'yes';
