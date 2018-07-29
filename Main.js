@@ -324,7 +324,8 @@ function PARSEVOCABULARY3100JJYT6(item){
   }
 }
 
-async function parseElement(item,allowVariables){
+async function parseElement(item,includer=window.use){
+    result = 0;
     //if this current element has an "id" attribute set to something...
     if(item.hasAttribute("id")){
         window[item.getAttribute("id")] = item;
@@ -336,42 +337,54 @@ async function parseElement(item,allowVariables){
         const importName = item.getAttribute("import").split("=>");
         const componentName = importName[0].trim();
         const selector = importName[1].trim();
-        const req = await use.component(componentName);
+        const req = await includer.component(componentName);
         const selected = req[componentName].querySelector(selector);
         item.appendChild(selected);
         if(selected.onload){
-            (selected.onload)();
+            await (selected.onload)();
         }
     }else if(item.children.length > 0){
-        await recursiveParser(item,allowVariables);
+        await recursiveParser(item,includer);
     }
     
     if(item.hasAttribute("export")){
         window[item.getAttribute("export").trim()].appendChild(item);
         if(item.onload){
-            (item.onload)();
+            await (item.onload)();
         }
+        result = 1;
     }
-}
 
+    return result;
+}
+window.lastParsed=null;
 //iterating through every child node of the provided target
-async function recursiveParser(target,allowVariables){
-    foreach(target.children,async child=>{
+async function recursiveParser(target,includer=window.use){
+    let length = target.children.length;
+    let counter = 0;
+    for(let i = 0; i < length; i++){
+        if(!target.children[i-counter]) break;
+        let child = target.children[i-counter];
+        lastParsed=child;
         switch(child.tagName){
             case "SCRIPT":
                 eval(child.innerText);
             break;
+            case "SCRIPT":
+                document.body.appendChild(child);
+                counter++;
+            break;
             default:
-                await parseElement(child,allowVariables);
+                counter += await parseElement(child,includer);
             break;
         }
-    });
+    }
 }
 
 
 
 
-async function applyHtml(target,data,allowVariables){
+async function applyHtml(target,data){
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
@@ -383,9 +396,8 @@ async function applyHtml(target,data,allowVariables){
     //I'm using this to throw in the result data
     //and parse it as child nodes.
 
-    allowVariables = (isset(allowVariables)?allowVariables:false);
     target.innerHTML = data;
-    await recursiveParser(target,allowVariables);
+    await recursiveParser(target);
 }
 
 function foreachChild(children,f){
@@ -399,15 +411,8 @@ function foreachChild(children,f){
 }
 
 
-//basically does the same thing as go(ling, onready, target), but it's more straight forward
-function file_get_contents(uri){
-  return new Promise(function(resolve,reject){
-    new HttpEvent(uri,function(result,status){
-      this.status = status;
-      (resolve)(result);
-    }).run();
-  });
-
+async function file_get_contents(uri){
+    return (await new GetHttpPromise(uri)).response;
 }
 
 function forevery(array, $function, counter, from, to) {
@@ -967,11 +972,10 @@ include.components = async function(dir,list,f){
 
     if(dir === "") dir = "/components/";
     if(dir[dir.length-1] !== "/"){
-    dir +="/";
+        dir +="/";
     }
     f = f || function(){};
     const currentList = new Array();
-    let tmpModules = '';
     let length = list.length;
     if(length>0){
         for(let i = 0; i<length; i++){
