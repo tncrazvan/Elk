@@ -62,7 +62,6 @@ function showLeftMenu(menu,speed = 20){
     return new Promise(function(resolve,reject){
         let x = menu.offsetLeft;
         if(x >= 0) return;
-        menu.style.zIndex = 4;
         (function poll(){
             x += speed;
             if(x > 0){
@@ -95,7 +94,6 @@ function hideLeftMenu(menu,speed = 20){
             if(x > -menu.offsetWidth){
                 setTimeout(poll,1);
             }else{
-                menu.style.zIndex = 0;
                 menu.state = 0;
                 (swipe.onLeftMenuHide)();
                 (resolve)();
@@ -145,7 +143,6 @@ swipe.setLeftMenu=function(menu,speed = 20){
         }
 
         let value = menu.start.x + (dx > 0?dx-40:dx+40);
-        menu.style.zIndex = 4;
 
         if(dx > 0){
             if(swipe.start.x >= menu.offsetLeft+menu.offsetWidth+40){
