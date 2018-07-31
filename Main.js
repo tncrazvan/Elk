@@ -346,9 +346,6 @@ async function parseElement(item,includer=window.use){
     
     if(item.hasAttribute("export")){
         window[item.getAttribute("export").trim()].appendChild(item);
-        if(item.onload){
-            await (item.onload)();
-        }
         result = 1;
     }
 
@@ -368,7 +365,12 @@ async function recursiveParser(target,includer=window.use){
                 eval(child.innerText);
             break;
             case "STYLE":
-                target.appendChild(child);
+                if(child.hasAttribute("export")){
+                    window[child.getAttribute("export").trim()].appendChild(child);
+                    result = 1;
+                }else{
+                    document.body.appendChild(child);
+                }
                 counter++;
             break;
             default:
