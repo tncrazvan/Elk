@@ -338,11 +338,8 @@ async function parseElement(item,includer=window.use){
         const componentName = importName[0].trim();
         const selector = importName[1].trim();
         const req = await includer.component(componentName);
-        const selected = req[componentName].querySelector(selector);
-        item.appendChild(selected);
-        if(selected.onload){
-            await (selected.onload)();
-        }
+        item.appendChild(req[componentName]);
+        
     }else if(item.children.length > 0){
         await recursiveParser(item,includer);
     }
@@ -371,7 +368,7 @@ async function recursiveParser(target,includer=window.use){
                 eval(child.innerText);
             break;
             case "STYLE":
-                document.body.appendChild(child);
+                target.appendChild(child);
                 counter++;
             break;
             default:
