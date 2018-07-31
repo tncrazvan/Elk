@@ -324,8 +324,7 @@ function PARSEVOCABULARY3100JJYT6(item){
   }
 }
 
-async function parseElement(item,includer=window.use){
-    result = 0;
+async function parseElement(item,allowVariables){
     //if this current element has an "id" attribute set to something...
     if(item.hasAttribute("id")){
         window[item.getAttribute("id")] = item;
@@ -337,53 +336,42 @@ async function parseElement(item,includer=window.use){
         const importName = item.getAttribute("import").split("=>");
         const componentName = importName[0].trim();
         const selector = importName[1].trim();
-        const req = await includer.component(componentName);
-        item.appendChild(req[componentName]);
-        
+        const req = await use.component(componentName);
+        const selected = req[componentName].querySelector(selector);
+        item.appendChild(selected);
+        if(selected.onload){
+            (selected.onload)();
+        }
     }else if(item.children.length > 0){
-        await recursiveParser(item,includer);
+        await recursiveParser(item,allowVariables);
     }
     
     if(item.hasAttribute("export")){
         window[item.getAttribute("export").trim()].appendChild(item);
-        result = 1;
-    }
-
-    return result;
-}
-window.lastParsed=null;
-//iterating through every child node of the provided target
-async function recursiveParser(target,includer=window.use){
-    let length = target.children.length;
-    let counter = 0;
-    for(let i = 0; i < length; i++){
-        if(!target.children[i-counter]) break;
-        let child = target.children[i-counter];
-        lastParsed=child;
-        switch(child.tagName){
-            case "SCRIPT":
-                eval(child.innerText);
-            break;
-            case "STYLE":
-                if(child.hasAttribute("export")){
-                    window[child.getAttribute("export").trim()].appendChild(child);
-                    result = 1;
-                }else{
-                    document.body.appendChild(child);
-                }
-                counter++;
-            break;
-            default:
-                counter += await parseElement(child,includer);
-            break;
+        if(item.onload){
+            (item.onload)();
         }
     }
 }
 
+//iterating through every child node of the provided target
+async function recursiveParser(target,allowVariables){
+    foreach(target.children,async child=>{
+        switch(child.tagName){
+            case "SCRIPT":
+                eval(child.innerText);
+            break;
+            default:
+                await parseElement(child,allowVariables);
+            break;
+        }
+    });
+}
 
 
 
-async function applyHtml(target,data){
+
+async function applyHtml(target,data,allowVariables){
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
@@ -395,8 +383,9 @@ async function applyHtml(target,data){
     //I'm using this to throw in the result data
     //and parse it as child nodes.
 
+    allowVariables = (isset(allowVariables)?allowVariables:false);
     target.innerHTML = data;
-    await recursiveParser(target);
+    await recursiveParser(target,allowVariables);
 }
 
 function foreachChild(children,f){
@@ -410,8 +399,15 @@ function foreachChild(children,f){
 }
 
 
-async function file_get_contents(uri){
-    return (await new GetHttpPromise(uri)).response;
+//basically does the same thing as go(ling, onready, target), but it's more straight forward
+function file_get_contents(uri){
+  return new Promise(function(resolve,reject){
+    new HttpEvent(uri,function(result,status){
+      this.status = status;
+      (resolve)(result);
+    }).run();
+  });
+
 }
 
 async function forevery(array, $function, counter, from, to) {
@@ -972,10 +968,11 @@ include.components = async function(dir,list,f){
 
     if(dir === "") dir = "/components/";
     if(dir[dir.length-1] !== "/"){
-        dir +="/";
+    dir +="/";
     }
     f = f || function(){};
     const currentList = new Array();
+    let tmpModules = '';
     let length = list.length;
     if(length>0){
         for(let i = 0; i<length; i++){
@@ -1076,5 +1073,4 @@ include.js = function(dir,list,f){
 /*
 INCLUDER ENDS
  */
-
 
