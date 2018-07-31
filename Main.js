@@ -410,18 +410,17 @@ function file_get_contents(uri){
 
 }
 
-async function forevery(array, $function, counter, from, to) {
-    let i;
-    let isLast = false;
+function forevery(array, $function, counter, from, to) {
+    var i;
+    var isLast = false;
     for (i = (from ? from : 0); i < (to ? to : array.length); i += counter) {
         isLast=!(i+1 < (to ? to : array.length));
-        await $function(array[i],i,isLast);
+        $function(array[i],i,isLast);
     }
-    return;
 }
 
 function foreach(array, $function, from, to) {
-    return forevery(array, $function, 1, from, to);
+    forevery(array, $function, 1, from, to);
 }
 
 function foreachr(array, $function) {
@@ -842,7 +841,7 @@ function Rgba(red,green,blue,alfa){
     return new String("rgba("+red+","+green+","+blue+","+alfa+")");
 }
 
-function Popup(url,title="",i={}) {
+function Popup(url,title,i) {
 
     if(isset(i.toolbar)){
     	if(i.toolbar) i.toolbar = 'yes';
