@@ -108,12 +108,14 @@ function isElement(obj) {
   }
 }
 
-function create(tag,content,allowVariables){
+function create(tag,content,options,allowVariables){
     tag = tag.split(".");
+    console.log(tag);
     var element;
     foreach(tag,function(item,i,isLast){
       if(i === 0){
         tmp = tag[i].split("#");
+        if(tmp[0] === "") tmp[0] = "div";
         element = document.createElement(tmp[0]);
         if(tmp.length > 1){
           window[tmp[1]] = element;
@@ -124,7 +126,7 @@ function create(tag,content,allowVariables){
           element.className +=" ";
       }
     });
-    if(isset(content)){
+    if(isset(content) && content !== null){
       if(isElement(content)){
         element.innerHTML = "";
         element.appendChild(content);
@@ -139,6 +141,13 @@ function create(tag,content,allowVariables){
         element.applyHtml(content,allowVariables);
       }
     }
+
+    if(options)
+        for(let key in options){
+            element.setAttribute(key,options[key]);
+        }
+        
+
     return element;
 }
 
