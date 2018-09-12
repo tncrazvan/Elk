@@ -110,7 +110,6 @@ function isElement(obj) {
 
 function create(tag,content,options,allowVariables){
     tag = tag.split(".");
-    console.log(tag);
     var element;
     foreach(tag,function(item,i,isLast){
       if(i === 0){
