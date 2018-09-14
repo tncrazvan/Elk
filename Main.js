@@ -390,16 +390,16 @@ async function recursiveParser(target,allowVariables){
 function addClickEffect(item){
 
     item.onmousedown = function(e) {
-        let max = item.offsetWidth;
+        let min = item.offsetHeight;
         if(item.offsetHeight > item.offsetWidth)
-            max = item.offsetHeight;
+            min = item.offsetWidth;
         let x = (e.offsetX == undefined) ? e.layerX : e.offsetX;
         let y = (e.offsetY == undefined) ? e.layerY : e.offsetY;
         let effect = document.createElement('div');
-        effect.style.margin = Pixel(-max/2);
-        effect.style.width = Pixel(max);
-        effect.style.height = Pixel(max);
-        effect.style.borderRadius = Pixel(max/2);
+        effect.style.margin = Pixel(-min/2);
+        effect.style.width = Pixel(min);
+        effect.style.height = Pixel(min);
+        effect.style.borderRadius = Pixel(min/2);
         effect.style.position = "absolute";
         effect.style.background = Rgba(255,255,255,0.5);
         effect.style.transform = "scale(0)";
