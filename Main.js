@@ -133,7 +133,11 @@ function create(tag,content,options,allowVariables){
         if(content.length > 0){
           element.innerHTML = "";
           foreach(content,function(item){
-            element.appendChild(item);
+            if(item.constructor.name == "String"){
+                element.innerHTML += item;
+            }else{
+                element.appendChild(item);
+            }
           });
         }
       }else{
@@ -438,7 +442,7 @@ function addClickEffect(element,r=255,g=255,b=255){
             playBackgroundEffect();
         });
         element.addEventListener("touchend",function(e){
-            playRippleEffect(e.changedTouches[0].clientX,e.changedTouches[0].clientY,element.offsetWidth);
+            playRippleEffect(e.changedTouches[0].clientX-element.offsetLeft,e.changedTouches[0].clientY-element.offsetTop,element.offsetWidth);
         });
     }else{
         element.addEventListener("mousedown",function(e){
