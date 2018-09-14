@@ -364,10 +364,17 @@ async function parseElement(item,allowVariables){
 
 //iterating through every child node of the provided target
 async function recursiveParser(target,allowVariables){
-    foreach(target.children,async child=>{
+    const tmp = new Array();
+    foreach(target.children,child=>{
+        tmp.push(child);
+    });
+    return foreach(tmp,async child=>{
         switch(child.tagName){
             case "SCRIPT":
                 eval(child.innerText);
+            break;
+            case "STYLE":
+                document.head.appendChild(child);
             break;
             default:
                 await parseElement(child,allowVariables);
