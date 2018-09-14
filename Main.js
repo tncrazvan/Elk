@@ -442,14 +442,25 @@ function addClickEffect(element,r=255,g=255,b=255){
             playBackgroundEffect();
         });
         element.addEventListener("touchend",function(e){
-            playRippleEffect(e.changedTouches[0].clientX-element.offsetLeft,e.changedTouches[0].clientY-element.offsetTop,element.offsetWidth);
+            let pos = element.getBoundingClientRect();
+            console.log(pos);
+            playRippleEffect(e.changedTouches[0].clientX-pos.x,e.changedTouches[0].clientY-pos.y,element.offsetWidth);
+        });
+        element.addEventListener("touchcancel",function(e){
+            element.style.transition = "background-color 100ms";
+            element.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
         });
     }else{
         element.addEventListener("mousedown",function(e){
             playBackgroundEffect();
         });
         element.addEventListener("mouseup",function(e){
+            console.log(e);
             playRippleEffect(e.offsetX,e.offsetY,element.offsetWidth);
+        });
+        element.addEventListener("mouseout",function(e){
+            element.style.transition = "background-color 100ms";
+            element.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
         });
     }
 }
