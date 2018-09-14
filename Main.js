@@ -393,7 +393,6 @@ async function recursiveParser(target,allowVariables){
 
 function addClickEffect(element,r=255,g=255,b=255){
     const playRippleEffect = function(x,y,maxRadius){
-        console.log(maxRadius);
         element.style.transition = "background-color 100ms";
         element.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
         const canvas = create("canvas","",{
