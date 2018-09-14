@@ -378,7 +378,12 @@ async function recursiveParser(target,allowVariables){
             break;
             default:
                 if(child.hasAttribute("clickeffect")){
-                    addClickEffect(child);
+                    const options = child.getAttribute("clickeffect").split(",");
+                    const red = options[0]?options[0]:255;
+                    const green = options[1]?options[1]:255;
+                    const blue = options[2]?options[2]:255;
+                    const radius = options[3]?options[3]:100;
+                    addClickEffect(child,red,green,blue,radius);
                 }
                 await parseElement(child,allowVariables);
             break;
@@ -387,32 +392,40 @@ async function recursiveParser(target,allowVariables){
 }
 
 
-function addClickEffect(item){
+function addClickEffect(element,r=255,g=255,b=255,maxRadius=100){
+    element.onmousedown=e=>{
+        const canvas = create("canvas","",{
+            width: element.offsetWidth,
+            height: element.offsetHeight
+        });
+        canvas.style.cursor="pointer";
+        element.appendChild(canvas);
 
-    item.onmousedown = function(e) {
-        let min = item.offsetHeight;
-        if(item.offsetHeight > item.offsetWidth)
-            min = item.offsetWidth;
-        let x = (e.offsetX == undefined) ? e.layerX : e.offsetX;
-        let y = (e.offsetY == undefined) ? e.layerY : e.offsetY;
-        let effect = document.createElement('div');
-        effect.style.margin = Pixel(-min/2);
-        effect.style.width = Pixel(min);
-        effect.style.height = Pixel(min);
-        effect.style.borderRadius = Pixel(min/2);
-        effect.style.position = "absolute";
-        effect.style.background = Rgba(255,255,255,0.5);
-        effect.style.transform = "scale(0)";
-        effect.style.pointerEvents = "none";
-        effect.style.animation = "clickeffect 1s ease";
+        canvas.style.position="absolute";
+        canvas.style.pointerEvents="none";
+        canvas.style.background="none";
 
-        effect.style.top = y + 'px';
-        effect.style.left = x + 'px';
-        e.srcElement.appendChild(effect);
-        setTimeout(function() {
-        e.srcElement.removeChild(effect);
-        }, 1100);
-    }
+        canvas.style.left = Pixel(element.offsetLeft);
+        canvas.style.top = Pixel(element.offsetTop);
+        const ctx = canvas.getContext("2d");
+        let radius = 0;
+        let opacity = 0.1;
+        (function poll(){
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            radius += 1;
+            opacity -= 0.001;
+            ctx.fillStyle = "rgba("+r+","+g+","+b+","+opacity+")";
+            ctx.beginPath();
+            ctx.arc(e.offsetX,e.offsetY,radius,0,2*Math.PI);
+            ctx.fill();
+            if(radius >= maxRadius){
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                element.removeChild(canvas);
+                return;
+            };
+            setTimeout(poll,1);
+        })();
+    };
 }
 
 
