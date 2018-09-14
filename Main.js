@@ -443,7 +443,6 @@ function addClickEffect(element,r=255,g=255,b=255){
         });
         element.addEventListener("touchend",function(e){
             let pos = element.getBoundingClientRect();
-            console.log(pos);
             playRippleEffect(e.changedTouches[0].clientX-pos.x,e.changedTouches[0].clientY-pos.y,element.offsetWidth);
         });
         element.addEventListener("touchcancel",function(e){
