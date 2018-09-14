@@ -454,7 +454,6 @@ function addClickEffect(element,r=255,g=255,b=255){
             playBackgroundEffect();
         });
         element.addEventListener("mouseup",function(e){
-            console.log(e);
             playRippleEffect(e.offsetX,e.offsetY,element.offsetWidth);
         });
         element.addEventListener("mouseout",function(e){
