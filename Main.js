@@ -394,7 +394,6 @@ async function recursiveParser(target,allowVariables){
     });
 }
 
-
 function addClickEffect(element,r=255,g=255,b=255){
     const playRippleEffect = function(x,y,maxRadius){
         element.style.transition = "background-color 100ms";
@@ -404,14 +403,17 @@ function addClickEffect(element,r=255,g=255,b=255){
             height: element.offsetHeight
         });
         canvas.style.cursor="pointer";
-        element.appendChild(canvas);
+        document.documentElement.appendChild(canvas);
 
         canvas.style.position="absolute";
         canvas.style.pointerEvents="none";
         canvas.style.background="none";
 
-        canvas.style.left = Pixel(element.offsetLeft);
-        canvas.style.top = Pixel(element.offsetTop);
+        let rect = element.getBoundingClientRect();
+        canvas.style.left = Pixel(rect.x);
+        canvas.style.top = Pixel(rect.y);
+        
+        canvas.style.margin= "0";
         const ctx = canvas.getContext("2d");
         let radius = 0;
         let opacity = 0.1;
@@ -425,9 +427,12 @@ function addClickEffect(element,r=255,g=255,b=255){
             ctx.fill();
             if(radius >= maxRadius && opacity <= 0.005){
                 ctx.clearRect(0,0,canvas.width,canvas.height);
-                element.removeChild(canvas);
+                document.documentElement.removeChild(canvas);
                 return;
             };
+            rect = element.getBoundingClientRect();
+            canvas.style.left = Pixel(rect.x);
+            canvas.style.top = Pixel(rect.y);
             setTimeout(poll,1);
         })();
     };
@@ -443,6 +448,7 @@ function addClickEffect(element,r=255,g=255,b=255){
         });
         element.addEventListener("touchend",function(e){
             let pos = element.getBoundingClientRect();
+
             playRippleEffect(e.changedTouches[0].clientX-pos.x,e.changedTouches[0].clientY-pos.y,element.offsetWidth);
         });
         element.addEventListener("touchcancel",function(e){
