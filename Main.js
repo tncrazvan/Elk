@@ -377,6 +377,9 @@ async function recursiveParser(target,allowVariables){
                 document.head.appendChild(child);
             break;
             default:
+                if(child.hasAttribute("clickeffect")){
+                    addClickEffect(child);
+                }
                 await parseElement(child,allowVariables);
             break;
         }
@@ -384,6 +387,33 @@ async function recursiveParser(target,allowVariables){
 }
 
 
+function addClickEffect(item){
+
+    item.onmousedown = function(e) {
+        let max = item.offsetWidth;
+        if(item.offsetHeight > item.offsetWidth)
+            max = item.offsetHeight;
+        let x = (e.offsetX == undefined) ? e.layerX : e.offsetX;
+        let y = (e.offsetY == undefined) ? e.layerY : e.offsetY;
+        let effect = document.createElement('div');
+        effect.style.margin = Pixel(-max/2);
+        effect.style.width = Pixel(max);
+        effect.style.height = Pixel(max);
+        effect.style.borderRadius = Pixel(max/2);
+        effect.style.position = "absolute";
+        effect.style.background = Rgba(255,255,255,0.5);
+        effect.style.transform = "scale(0)";
+        effect.style.pointerEvents = "none";
+        effect.style.animation = "clickeffect 1s ease";
+
+        effect.style.top = y + 'px';
+        effect.style.left = x + 'px';
+        e.srcElement.appendChild(effect);
+        setTimeout(function() {
+        e.srcElement.removeChild(effect);
+        }, 1100);
+    }
+}
 
 
 async function applyHtml(target,data,allowVariables){
@@ -1088,3 +1118,30 @@ include.js = function(dir,list,f){
 INCLUDER ENDS
  */
 
+
+
+
+
+document.head.appendChild(create("style",
+    "@keyframes clickeffect {"
+        +"from {"
+            +"opacity: 0.7;"
+            +"transform: scale(0);"
+        +"}"
+        +"to {"
+                +"opacity: 0;"
+                +"transform: scale(2);"
+        +"}"
+    +"}"
+
+    +"@-webkit-keyframes clickeffect {"
+        +"from {"
+            +"opacity: 0.7;"
+            +"transform: scale(0);"
+        +"}"
+        +"to {"
+            +"opacity: 0;"
+            +"transform: scale(2);"
+        +"}"
+    +"}"                  
+    ));
