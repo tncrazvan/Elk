@@ -419,7 +419,7 @@ function addClickEffect(element,r=255,g=255,b=255){
             ctx.fill();
             if(radius >= maxRadius && opacity <= 0.005){
                 ctx.clearRect(0,0,canvas.width,canvas.height);
-                document.documentElement.removeChild(canvas);
+                element.removeChild(canvas);
                 return;
             };
             rect = element.getBoundingClientRect();
