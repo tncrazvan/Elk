@@ -243,35 +243,29 @@ HttpEvent.STATUS_LOOP_DETECTED = "508 Loop Detected";
 HttpEvent.STATUS_NOT_EXTENDED = "510 Not Extended";
 HttpEvent.STATUS_NETWORK_AUTHENTICATION_REQUIRED = "511 Network Authentication Required";
 
-let GetHttpPromise = function(uri){
-    return new HttpEvent("get:"+uri);
+let GetHttpPromise = function(uri,headers){
+    return new HttpEvent("get:"+uri,null,null,headers);
 };
 
-let PostHttpPromise = function(uri,data,events){
-    return new HttpEvent("post:"+uri,data,events);
+let PostHttpPromise = function(uri,data,events,headers){
+    return new HttpEvent("post:"+uri,data,events,headers);
 };
 
 
-function HttpEvent(uri, data, events) {
+function HttpEvent(uri, data, events, headers) {
+    let partial = false;
     let method = uri.split(":",true)[0].toUpperCase();
     uri = uri.substr(method.length+1);
 
-    let requestHeaders = {};
-    this.setRequestHeader=function(headers){
-      requestHeaders = headers;
-    };
-
     return new Promise(function(resolve,reject){
-
         if(typeof data === "object")
             data = JSON.stringify(data);
         
 
 
         let xhr = new XMLHttpRequest();
+        xhr.open(method,uri,true);
         //set events here
-
-
         if(events){
             if (events.download) {
                 for (var key in events.download) {
@@ -293,12 +287,10 @@ function HttpEvent(uri, data, events) {
                 (resolve)(xhr);
             }
         };
-
-
-        xhr.open(method,uri,true);
-        for (var key in requestHeaders) {
-            if (requestHeaders.hasOwnProperty(key))
-                xhr.setRequestHeader(key,requestHeaders[key]);
+        for (var key in headers) {
+            if (headers.hasOwnProperty(key)){
+                xhr.setRequestHeader(key,headers[key]);
+            }
         }
         xhr.send(data); //run
     });
@@ -403,7 +395,7 @@ function addClickEffect(element,r=255,g=255,b=255){
             height: element.offsetHeight
         });
         canvas.style.cursor="pointer";
-        document.documentElement.appendChild(canvas);
+        element.appendChild(canvas);
 
         canvas.style.position="absolute";
         canvas.style.pointerEvents="none";
