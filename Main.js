@@ -523,24 +523,24 @@ function file_get_contents(uri){
 
 }
 
-function forevery(array, $function, counter, from, to) {
+async function forevery(array, $function, counter, from, to) {
     var i;
     var isLast = false;
     for (i = (from ? from : 0); i < (to ? to : array.length); i += counter) {
         isLast=!(i+1 < (to ? to : array.length));
-        $function(array[i],i,isLast);
+        await $function(array[i],i,isLast);
     }
 }
 
-function foreach(array, $function, from, to) {
-    forevery(array, $function, 1, from, to);
+async function foreach(array, $function, from, to) {
+    await forevery(array, $function, 1, from, to);
 }
 
-function foreachr(array, $function) {
+async function foreachr(array, $function) {
     var i;
     for (i = array.length - 1; i >= 0; i--) {
         var element = array[i];
-        $function(element);
+        await $function(element);
     }
 }
 
@@ -676,6 +676,9 @@ String.prototype.splice = function(start, delCount, newSubStr) {
     return this.slice(0, start) + newSubStr + this.slice(start + Math.abs(delCount));
 };
 
+String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
+}
 
 function selectText(container) {
     if (document.selection) {
@@ -954,7 +957,7 @@ function Rgba(red,green,blue,alfa){
     return new String("rgba("+red+","+green+","+blue+","+alfa+")");
 }
 
-function Popup(url,title,i) {
+function Popup(url,title=null,i={}) {
 
     if(isset(i.toolbar)){
     	if(i.toolbar) i.toolbar = 'yes';
@@ -1167,7 +1170,7 @@ include.js = function(dir,list,f){
                 }else{
                     script.setAttribute("src",dir+file+".js");
                 }
-                document.body.appendChild(script);
+                document.head.appendChild(script);
                 script.onload=function(){
                     (f)(script.getAttribute("src"));
                     if(i<length){
