@@ -1057,27 +1057,26 @@ function Includer(dir){
     this.currentComponentRequest = null;
     this.currentCSSRequest = null;
     this.currentJavaScriptRequest = null;
-    this.js=function(value){
-        return include.js(dir.js,value,function(file){
+    this.js=function(value,version=0){
+        return include.js(dir.js,value,version,function(file){
             $this.currentJavaScriptRequest = file;
         });
     };
-    this.css=function(value){
-        return include.css(dir.css,value,function(file){
+    this.css=function(value,version=0){
+        return include.css(dir.css,value,version,function(file){
             $this.currentCSSRequest = file;
         });
     };
-    this.component=function(value){
-        return include.component(dir.components,value,function(mod){
+    this.component=function(value,version=0){
+        return include.component(dir.components,value,version,function(mod){
             $this.currentComponentRequest = mod;
         });
     };this.components = this.component;
-
 };
 
 function include(){}
 window.components = new Array();
-include.components = async function(dir,list,f){
+include.components = async function(dir,list,version=0,f){
     if(typeof list =="string")
     list = [list];
 
@@ -1092,7 +1091,7 @@ include.components = async function(dir,list,f){
     if(length>0){
         for(let i = 0; i<length; i++){
             let file = list[i];
-            const req = await fetch(dir+file+".html");
+            const req = await fetch(dir+file+".html?v="+version);
             const text = await req.text();
             const o = create("component",text);
             o.setAttribute("name",file);
@@ -1106,7 +1105,7 @@ include.components = async function(dir,list,f){
 };
 include.component = include.components;
 
-include.css = function(dir,list,f){
+include.css = function(dir,list,version=0,f){
     if(typeof list === "string")
         list = [list];
 
@@ -1128,7 +1127,7 @@ include.css = function(dir,list,f){
                 if(file.charAt(0)==="@"){
                     style.setAttribute("href",(file.replace("@","")));
                 }else{
-                    style.setAttribute("href",dir+file+".css");
+                    style.setAttribute("href",dir+file+".css?v="+version);
                 }
                 document.head.appendChild(style);
                 style.onload=function(){
@@ -1145,7 +1144,7 @@ include.css = function(dir,list,f){
 
 };
 
-include.js = function(dir,list,f){
+include.js = function(dir,list,version=0,f){
     if(typeof list === "string")
         list = [list];
 
@@ -1168,7 +1167,7 @@ include.js = function(dir,list,f){
                 if(file.charAt(0)==="@"){
                     script.setAttribute("src",(file.replace("@","")));
                 }else{
-                    script.setAttribute("src",dir+file+".js");
+                    script.setAttribute("src",dir+file+".js?v="+version);
                 }
                 document.head.appendChild(script);
                 script.onload=function(){
