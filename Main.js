@@ -339,19 +339,40 @@ async function parseElement(item,allowVariables){
     }else if(item.hasAttribute("import")){
         const importName = item.getAttribute("import").split("=>");
         const componentName = importName[0].trim();
-
-        const selectors = importName[1].trim().split(",");
-
-        for(let i=0;i<selectors.length;i++){
-            const selector = selectors[1];
+        if(importName[1].trim() === "*"){
             const req = await use.component(componentName);
-            const selected = req[componentName].querySelector(selector);
-            item.appendChild(selected);
-            if(selected.onload){
-                (selected.onload)();
+            const components = req[componentName].querySelectorAll(":scope > *");
+            for(let i=0;i<components.length;i++){
+                const selected = components[i];
+                switch(selected.tagName){
+                    case "SCRIPT":
+                        eval(selected.innerText);
+                        continue;
+                    case "STYLE":
+                        document.head.appendChild(selected);
+                        continue;
+                }
+                item.appendChild(selected);
+                if(selected.onload){
+                    await (selected.onload)();
+                }else if(window[selected.hasAttribute("onload")]){
+                    await (window[selected.getAttribute("onload")])();
+                }
+            }
+        }else{
+            const selectors = importName[1].trim().split(",");
+            for(let i=0;i<selectors.length;i++){
+                const selector = selectors[1];
+                const req = await use.component(componentName);
+                const selected = req[componentName].querySelector(selector);
+                item.appendChild(selected);
+                if(selected.onload){
+                    await (selected.onload)();
+                }else if(window[selected.hasAttribute("onload")]){
+                    await (window[selected.getAttribute("onload")])();
+                }
             }
         }
-        
     }else if(item.children.length > 0){
         await recursiveParser(item,allowVariables);
     }
@@ -359,8 +380,11 @@ async function parseElement(item,allowVariables){
     if(item.hasAttribute("export")){
         window[item.getAttribute("export").trim()].appendChild(item);
         if(item.onload){
-            (item.onload)();
+            await (item.onload)();
+        }else if(window[item.hasAttribute("onload")]){
+            await (window[item.getAttribute("onload")])();
         }
+
     }
 }
 
