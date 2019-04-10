@@ -339,13 +339,19 @@ async function parseElement(item,allowVariables){
     }else if(item.hasAttribute("import")){
         const importName = item.getAttribute("import").split("=>");
         const componentName = importName[0].trim();
-        const selector = importName[1].trim();
-        const req = await use.component(componentName);
-        const selected = req[componentName].querySelector(selector);
-        item.appendChild(selected);
-        if(selected.onload){
-            (selected.onload)();
+
+        const selectors = importName[1].trim().split(",");
+
+        for(let i=0;i<selectors.length;i++){
+            const selector = selectors[1];
+            const req = await use.component(componentName);
+            const selected = req[componentName].querySelector(selector);
+            item.appendChild(selected);
+            if(selected.onload){
+                (selected.onload)();
+            }
         }
+        
     }else if(item.children.length > 0){
         await recursiveParser(item,allowVariables);
     }
