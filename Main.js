@@ -1091,7 +1091,12 @@ include.components = async function(dir,list,version=0,f){
     if(length>0){
         for(let i = 0; i<length; i++){
             let file = list[i];
-            const req = await fetch(dir+file+".html?v="+version);
+            let req
+            if(file.charAt(0)==="@"){
+                req = await fetch(dir+file.substr(1)+"&v="+version);
+            }else{
+                req = await fetch(dir+file+".html?v="+version);
+            }
             const text = await req.text();
             const o = create("component",text);
             o.setAttribute("name",file);
