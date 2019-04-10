@@ -1093,7 +1093,7 @@ include.components = async function(dir,list,version=0,f){
             let file = list[i];
             let req
             if(file.charAt(0)==="@"){
-                req = await fetch(dir+file.substr(1)+"&v="+version);
+                req = await fetch(dir+file.substr(1)+"?v="+version);
             }else{
                 req = await fetch(dir+file+".html?v="+version);
             }
