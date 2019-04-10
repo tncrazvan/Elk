@@ -344,14 +344,6 @@ async function parseElement(item,allowVariables){
             const components = req[componentName].querySelectorAll(":scope > *");
             for(let i=0;i<components.length;i++){
                 const selected = components[i];
-                switch(selected.tagName){
-                    case "SCRIPT":
-                        eval(selected.innerText);
-                        continue;
-                    case "STYLE":
-                        document.head.appendChild(selected);
-                        continue;
-                }
                 item.appendChild(selected);
                 if(selected.onload){
                     await (selected.onload)();
