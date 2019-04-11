@@ -344,6 +344,10 @@ async function parseElement(item,allowVariables){
             const components = req[componentName].querySelectorAll(":scope > *");
             for(let i=0;i<components.length;i++){
                 const selected = components[i];
+                if(selected.tagName === "SCRIPT"){
+                    eval(selected.innerText);
+                    continue;
+                }
                 item.appendChild(selected);
                 if(selected.onload){
                     await (selected.onload)();
@@ -357,6 +361,10 @@ async function parseElement(item,allowVariables){
                 const selector = selectors[1];
                 const req = await use.component(componentName);
                 const selected = req[componentName].querySelector(selector);
+                if(selected.tagName === "SCRIPT"){
+                    eval(selected.innerText);
+                    continue;
+                }
                 item.appendChild(selected);
                 if(selected.onload){
                     await (selected.onload)();
