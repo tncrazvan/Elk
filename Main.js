@@ -111,34 +111,35 @@ function isElement(obj) {
 function create(tag,content,options,allowVariables){
     tag = tag.split(".");
     var element;
-    foreach(tag,function(item,i,isLast){
-      if(i === 0){
-        tmp = tag[i].split("#");
-        if(tmp[0] === "") tmp[0] = "div";
-        element = document.createElement(tmp[0]);
-        if(tmp.length > 1){
-          window[tmp[1]] = element;
+    for(let i = 0; i < tag.length; i++){
+        if(i === 0){
+            tmp = tag[i].split("#");
+            if(tmp[0] === "") tmp[0] = "div";
+            element = document.createElement(tmp[0]);
+            if(tmp.length > 1){
+                window[tmp[1]] = element;
+            }
+        }else{
+            element.className +=tag[i];
+            if(i < tag.length-1)
+                element.className +=" ";
         }
-      }else{
-        element.className +=tag[i];
-        if(!isLast)
-          element.className +=" ";
-      }
-    });
+    }
     if(isset(content) && content !== null){
       if(isElement(content)){
         element.innerHTML = "";
         element.appendChild(content);
       }else if(content.constructor.name === "Array"){
         if(content.length > 0){
-          element.innerHTML = "";
-          foreach(content,function(item){
-            if(item.constructor.name == "String"){
-                element.innerHTML += item;
-            }else{
-                element.appendChild(item);
+            element.innerHTML = "";
+            for(let i = 0; i<content.length; i++){
+                const item = content[i];
+                if(item.constructor.name == "String"){
+                    element.innerHTML += item;
+                }else{
+                    element.appendChild(item);
+                }
             }
-          });
         }
       }else{
         element.applyHtml(content,allowVariables);
@@ -340,36 +341,24 @@ async function parseElement(item,allowVariables){
         const importName = item.getAttribute("import").split("=>");
         const componentName = importName[0].trim();
         if(importName[1].trim() === "*"){
-            const req = await use.component(componentName);
-            const components = req[componentName].querySelectorAll(":scope > *");
-            for(let i=0;i<components.length;i++){
-                const selected = components[i];
-                if(selected.tagName === "SCRIPT"){
-                    eval(selected.innerText);
-                    continue;
-                }
-                item.appendChild(selected);
-                if(selected.onload){
-                    await (selected.onload)();
-                }else if(window[selected.hasAttribute("onload")]){
-                    await (window[selected.getAttribute("onload")])();
-                }
-            }
+            const req = await use.component(componentName,false);
+            item.applyHtml(req,allowVariables);
         }else{
             const selectors = importName[1].trim().split(",");
             for(let i=0;i<selectors.length;i++){
                 const selector = selectors[1];
                 const req = await use.component(componentName);
                 const selected = req[componentName].querySelector(selector);
+                if(selected === null) continue;
                 if(selected.tagName === "SCRIPT"){
                     eval(selected.innerText);
-                    continue;
-                }
-                item.appendChild(selected);
-                if(selected.onload){
-                    await (selected.onload)();
-                }else if(window[selected.hasAttribute("onload")]){
-                    await (window[selected.getAttribute("onload")])();
+                }else{
+                    item.appendChild(selected);
+                    if(selected.onload){
+                        await (selected.onload)();
+                    }else if(window[selected.hasAttribute("onload")]){
+                        await (window[selected.getAttribute("onload")])();
+                    }
                 }
             }
         }
@@ -391,10 +380,10 @@ async function parseElement(item,allowVariables){
 //iterating through every child node of the provided target
 async function recursiveParser(target,allowVariables){
     const tmp = new Array();
-    foreach(target.children,child=>{
+    await foreach(target.children,child=>{
         tmp.push(child);
     });
-    return foreach(tmp,async child=>{
+    await foreach(tmp,async child=>{
         switch(child.tagName){
             case "SCRIPT":
                 eval(child.innerText);
@@ -1097,8 +1086,8 @@ function Includer(dir){
             $this.currentCSSRequest = file;
         });
     };
-    this.component=function(value,version=0){
-        return include.component(dir.components,value,version,function(mod){
+    this.component=function(value,apply=true,version=0){
+        return include.component(dir.components,value,apply,version,function(mod){
             $this.currentComponentRequest = mod;
         });
     };this.components = this.component;
@@ -1106,7 +1095,7 @@ function Includer(dir){
 
 function include(){}
 window.components = new Array();
-include.components = async function(dir,list,version=0,f){
+include.components = async function(dir,list,apply=true,version=0,f){
     if(typeof list =="string")
     list = [list];
 
@@ -1116,7 +1105,6 @@ include.components = async function(dir,list,version=0,f){
     }
     f = f || function(){};
     const currentList = new Array();
-    let tmpModules = '';
     let length = list.length;
     if(length>0){
         for(let i = 0; i<length; i++){
@@ -1128,11 +1116,15 @@ include.components = async function(dir,list,version=0,f){
                 req = await fetch(dir+file+".html?v="+version);
             }
             const text = await req.text();
-            const o = create("component",text);
-            o.setAttribute("name",file);
-            components[file] = o;
-            currentList[file] = o;
-            (f)(file,o);
+            if(apply){
+                const o = create("component",text);
+                o.setAttribute("name",file);
+                components[file] = o;
+                currentList[file] = o;
+                (f)(file,o);
+            }else{
+                return text;
+            }
         }
         return currentList;
     }
