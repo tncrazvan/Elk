@@ -133,8 +133,12 @@ async function parseElement(item,allowVariables){
                 const req = await use.component(componentName);
                 const selected = req[componentName].querySelector(selector);
                 if(selected === null) continue;
-                if(selected.tagName === "SCRIPT"){
-                    eval(selected.innerText);
+                if(selected.tagName === "SCRIPT" && !selected.hasAttribute("src")){
+                    if(selected.hasAttribute("src")){
+                        await use.js("@"+selected.getAttribute("src"));
+                    }else{
+                        await eval(selected.innerText);
+                    }
                 }else{
                     item.appendChild(selected);
                     if(selected.onload){
@@ -169,7 +173,11 @@ async function recursiveParser(target,allowVariables){
     await foreach(tmp,async child=>{
         switch(child.tagName){
             case "SCRIPT":
-                eval(child.innerText);
+                if(child.hasAttribute("src")){
+                    await use.js("@"+child.getAttribute("src"));
+                }else{
+                    await eval(child.innerText);
+                }
             break;
             case "STYLE":
                 document.head.appendChild(child);
