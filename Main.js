@@ -19,27 +19,53 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-window.isFunction=function(functionToCheck){
-    let getType = {};
-    return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
-};
-window.isElement = function(obj) {
-    try {
-        //Using W3 DOM2 (works for FF, Opera and Chrome)
-        return obj instanceof HTMLElement;
+function isset(object){
+    if(object!==undefined){
+        return true;
+    }else{
+        return false;
     }
-    catch(e){
-        //Browsers not supporting W3 DOM2 don't have HTMLElement and
-        //an exception is thrown and we end up here. Testing some
-        //properties that all elements have (works on IE7)
-        return (typeof obj==="object") &&
-        (obj.nodeType===1) && (typeof obj.style === "object") &&
-        (typeof obj.ownerDocument ==="object");
+}
+
+function isnull(object){
+    if(object === null) {
+        return true;
+    } else {
+        return false;
     }
-};
-window.create = function(tag,content,options,allowVariables){
+}
+
+function isempty(object){
+    if(object===""){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+function isFunction(functionToCheck) {
+ var getType = {};
+ return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+}
+
+function isElement(obj) {
+  try {
+    //Using W3 DOM2 (works for FF, Opera and Chrome)
+    return obj instanceof HTMLElement;
+  }
+  catch(e){
+    //Browsers not supporting W3 DOM2 don't have HTMLElement and
+    //an exception is thrown and we end up here. Testing some
+    //properties that all elements have (works on IE7)
+    return (typeof obj==="object") &&
+      (obj.nodeType===1) && (typeof obj.style === "object") &&
+      (typeof obj.ownerDocument ==="object");
+  }
+}
+
+function create(tag,content,options,allowVariables){
     tag = tag.split(".");
-    let element;
+    var element;
     for(let i = 0; i < tag.length; i++){
         if(i === 0){
             tmp = tag[i].split("#");
@@ -54,11 +80,11 @@ window.create = function(tag,content,options,allowVariables){
                 element.className +=" ";
         }
     }
-    if(content && content !== null){
-        if(isElement(content)){
+    if(isset(content) && content !== null){
+      if(isElement(content)){
         element.innerHTML = "";
         element.appendChild(content);
-        }else if(content.constructor.name === "Array"){
+      }else if(content.constructor.name === "Array"){
         if(content.length > 0){
             element.innerHTML = "";
             for(let i = 0; i<content.length; i++){
@@ -70,9 +96,9 @@ window.create = function(tag,content,options,allowVariables){
                 }
             }
         }
-        }else{
+      }else{
         element.applyHtml(content,allowVariables);
-        }
+      }
     }
 
     if(options)
@@ -82,17 +108,14 @@ window.create = function(tag,content,options,allowVariables){
         
 
     return element;
-};
-//this function will parse for inline html variables inside the given #text nodes
-window.PARSEVAR55TH72 = function(child){
-    return new Promise(function(resolve,reject){
-        let name = child.getAttribute("$");
-        use.component(name).then(function(r){
-            (resolve)();
-        });
-    });
-};
-window.parseElement = async function(item,allowVariables){
+}
+
+function insertAfter(newNode, referenceNode) {
+    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+}
+
+
+async function parseElement(item,allowVariables){
     //if this current element has an "id" attribute set to something...
     if(item.hasAttribute("id")){
         window[item.getAttribute("id")] = item;
@@ -123,7 +146,7 @@ window.parseElement = async function(item,allowVariables){
             }
         }
     }else if(item.children.length > 0){
-        await window.recursiveParser(item,allowVariables);
+        await recursiveParser(item,allowVariables);
     }
     
     if(item.hasAttribute("export")){
@@ -135,14 +158,15 @@ window.parseElement = async function(item,allowVariables){
         }
 
     }
-};
-//iterating through every child node of the provided node
-window.recursiveParser = async function(node,allowVariables){
+}
+
+//iterating through every child node of the provided target
+async function recursiveParser(target,allowVariables){
     const tmp = new Array();
-    node.children.forEach(function(child){
+    await foreach(target.children,child=>{
         tmp.push(child);
     });
-    tmp.foreach(function(child){
+    await foreach(tmp,async child=>{
         switch(child.tagName){
             case "SCRIPT":
                 eval(child.innerText);
@@ -158,12 +182,41 @@ window.recursiveParser = async function(node,allowVariables){
                     const blue = options[2]?options[2]:255;
                     addClickEffect(child,red,green,blue);
                 }
-                await node.parseElement(child,allowVariables);
+                await parseElement(child,allowVariables);
             break;
         }
     });
-};
-window.addClickEffect = function(element,r=255,g=255,b=255){
+}
+addClickEffect.first = true;
+function addClickEffect(element,r=255,g=255,b=255){
+    if(addClickEffect.first){
+        addClickEffect.first = false;
+        document.head.appendChild(create("style",
+            "@keyframes clickeffect {"
+                +"from {"
+                    +"opacity: 0.7;"
+                    +"transform: scale(0);"
+                +"}"
+                +"to {"
+                        +"opacity: 0;"
+                        +"transform: scale(2);"
+                +"}"
+            +"}"
+
+            +"@-webkit-keyframes clickeffect {"
+                +"from {"
+                    +"opacity: 0.7;"
+                    +"transform: scale(0);"
+                +"}"
+                +"to {"
+                    +"opacity: 0;"
+                    +"transform: scale(2);"
+                +"}"
+            +"}"
+            )
+        );
+    }
+
     const playRippleEffect = function(x,y,maxRadius){
         element.style.transition = "background-color 100ms";
         element.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
@@ -238,8 +291,9 @@ window.addClickEffect = function(element,r=255,g=255,b=255){
             element.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
         });
     }
-};
-window.isMobile = {
+}
+
+let isMobile = {
     Android: function() {
         return navigator.userAgent.match(/Android/i);
     },
@@ -259,31 +313,56 @@ window.isMobile = {
         return (isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows());
     }
 };
-window.applyHtml = async function(node,data,allowVariables){
-    //pushing data to the node and parse it
-    allowVariables = (allowVariables?allowVariables:false);
-    node.innerHTML = data;
-    await node.recursiveParser(node,allowVariables);
-};
-window.forevery = async function(array, $function, counter, from, to) {
+
+async function applyHtml(target,data,allowVariables){
+    //pushing data to the target
+    //NOTE: just pushing html text into an element won't execute
+    //the scripting inside the data, it will just print it as plain
+    //text and ignore it. The parsing is being done below inside the foreach cycle.
+
+    //target.innerHTML = data;
+
+    //temporary parent element
+    //I'm using this to throw in the result data
+    //and parse it as child nodes.
+
+    allowVariables = (isset(allowVariables)?allowVariables:false);
+    target.innerHTML = data;
+    await recursiveParser(target,allowVariables);
+}
+
+function foreachChild(children,f){
+  foreach(children,function(child){
+    if(child.childNodes.length > 0){
+      foreachChild(child.childNodes,f);
+    }else if(child.nodeName !== "#text" && child.nodeName !== "#comment"){
+      (f)(child);
+    }
+  });
+}
+
+async function forevery(array, $function, counter, from, to) {
     var i;
     var isLast = false;
     for (i = (from ? from : 0); i < (to ? to : array.length); i += counter) {
         isLast=!(i+1 < (to ? to : array.length));
         await $function(array[i],i,isLast);
     }
-};
-window.foreach = async function(array, $function, from, to) {
+}
+
+async function foreach(array, $function, from, to) {
     await forevery(array, $function, 1, from, to);
-};
-window.foreachr = async function(array, $function) {
+}
+
+async function foreachr(array, $function) {
     var i;
     for (i = array.length - 1; i >= 0; i--) {
         var element = array[i];
         await $function(element);
     }
-};
-window.notify = function(message) {
+}
+
+function notify(message) {
     // Let's check if the browser supports notifications
     if (!("Notification" in window)) {
         alert("This browser does not support desktop notification");
@@ -306,8 +385,20 @@ window.notify = function(message) {
     }
     // At last, if the user has denied notifications, and you
     // want to be respectful there is no need to bother them any more.
+}
+
+Array.prototype.remove = function(deleteValue) {
+  for (var i = 0; i < this.length; i++) {
+    if (this[i] == deleteValue) {
+      this.splice(i, 1);
+      i--;
+    }
+  }
+  return this;
 };
-window.getElementOffset = function(element) {
+
+
+var getElementOffset = function(element) {
     var top = 0, left = 0;
     do {
         top += element.offsetTop  || 0;
@@ -320,66 +411,82 @@ window.getElementOffset = function(element) {
         y: top
     };
 };
-window.Thread = function(f){
-    this.run=async function(t=0){
-        if(t > 0) setTimeout(f,t);
-        else (f)();
+
+
+function Thread(f){
+  this.run=function(t=0){
+    if(t>0) setTimeout(f,t);
+    else (f)();
+  };
+}
+
+
+function getInputCursorPos(input) {
+  if ("selectionStart" in input && document.activeElement == input) {
+    return {
+      start: input.selectionStart,
+      end: input.selectionEnd
     };
-};
-window.getInputCursorPos = function(input) {
-    if ("selectionStart" in input && document.activeElement == input) {
-        return {
-        start: input.selectionStart,
-        end: input.selectionEnd
-        };
+  }
+  else if (input.createTextRange) {
+    var sel = document.selection.createRange();
+    if (sel.parentElement() === input) {
+      var rng = input.createTextRange();
+      rng.moveToBookmark(sel.getBookmark());
+      for (var len = 0;
+      rng.compareEndPoints("EndToStart", rng) > 0;
+      rng.moveEnd("character", -1)) {
+        len++;
+      }
+      rng.setEndPoint("StartToStart", input.createTextRange());
+      for (var pos = { start: 0, end: len };
+      rng.compareEndPoints("EndToStart", rng) > 0;
+      rng.moveEnd("character", -1)) {
+        pos.start++;
+        pos.end++;
+      }
+      return pos;
     }
-    else if (input.createTextRange) {
-        var sel = document.selection.createRange();
-        if (sel.parentElement() === input) {
-        var rng = input.createTextRange();
-        rng.moveToBookmark(sel.getBookmark());
-        for (var len = 0;
-        rng.compareEndPoints("EndToStart", rng) > 0;
-        rng.moveEnd("character", -1)) {
-            len++;
-        }
-        rng.setEndPoint("StartToStart", input.createTextRange());
-        for (var pos = { start: 0, end: len };
-        rng.compareEndPoints("EndToStart", rng) > 0;
-        rng.moveEnd("character", -1)) {
-            pos.start++;
-            pos.end++;
-        }
-        return pos;
-        }
+  }
+  return -1;
+}
+
+
+function getEditableCursorPos(editableDiv) {
+  var caretPos = 0,
+    sel, range;
+  if (window.getSelection) {
+    sel = window.getSelection();
+    if (sel.rangeCount) {
+      range = sel.getRangeAt(0);
+      if (range.commonAncestorContainer.parentNode == editableDiv) {
+        caretPos = range.endOffset;
+      }
     }
-    return -1;
-};
-window.getEditableCursorPos = function(editableDiv) {
-    var caretPos = 0,
-        sel, range;
-    if (window.getSelection) {
-        sel = window.getSelection();
-        if (sel.rangeCount) {
-        range = sel.getRangeAt(0);
-        if (range.commonAncestorContainer.parentNode == editableDiv) {
-            caretPos = range.endOffset;
-        }
-        }
-    } else if (document.selection && document.selection.createRange) {
-        range = document.selection.createRange();
-        if (range.parentElement() == editableDiv) {
-        var tempEl = document.createElement("span");
-        editableDiv.insertBefore(tempEl, editableDiv.firstChild);
-        var tempRange = range.duplicate();
-        tempRange.moveToElementText(tempEl);
-        tempRange.setEndPoint("EndToEnd", range);
-        caretPos = tempRange.text.length;
-        }
+  } else if (document.selection && document.selection.createRange) {
+    range = document.selection.createRange();
+    if (range.parentElement() == editableDiv) {
+      var tempEl = document.createElement("span");
+      editableDiv.insertBefore(tempEl, editableDiv.firstChild);
+      var tempRange = range.duplicate();
+      tempRange.moveToElementText(tempEl);
+      tempRange.setEndPoint("EndToEnd", range);
+      caretPos = tempRange.text.length;
     }
-    return caretPos;
+  }
+  return caretPos;
+}
+
+
+String.prototype.splice = function(start, delCount, newSubStr) {
+    return this.slice(0, start) + newSubStr + this.slice(start + Math.abs(delCount));
 };
-window.selectText = function(container) {
+
+String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
+}
+
+function selectText(container) {
     if (document.selection) {
         var range = document.body.createTextRange();
         range.moveToElementText(container);
@@ -389,8 +496,36 @@ window.selectText = function(container) {
         range.selectNode(container);
         window.getSelection().addRange(range);
     }
+}
+
+Element.prototype.clear=function(){
+  this.innerHTML = "";
 };
-window.base64ToVideoBlob = function(string){
+
+Element.prototype.remove=function(){
+    this.oldParent = this.parentElement;
+    this.parentElement.removeChild(this);
+};
+
+Element.prototype.applyHtml=async function(data,allowVariables){
+  await applyHtml(this,data,allowVariables);
+};
+
+Element.prototype.insertChildAtIndex = function(child, index) {
+  if (!index) index = 0
+  if (index >= this.children.length) {
+    this.appendChild(child)
+  } else {
+    this.insertBefore(child, this.children[index])
+  }
+}
+
+Number.prototype.truncate=function(places){
+  if(!isset(Math.trunc)) return this;
+    return Math.trunc(this * Math.pow(10, places)) / Math.pow(10, places);
+};
+
+function base64ToVideoBlob(string){
     var byteCharacters = atob(string);
     var byteNumbers = new Array(byteCharacters.length);
     for (var i = 0; i < byteCharacters.length; i++) {
@@ -399,135 +534,207 @@ window.base64ToVideoBlob = function(string){
 
     var byteArray = new Uint8Array(byteNumbers);
     return new Blob([byteArray], {type: 'video/webm'});
-};
-window.base64ToBlob = function(b64Data, contentType, sliceSize) {
-    contentType = contentType || '';
-    sliceSize = sliceSize || 512;
+}
 
-    var byteCharacters = atob(b64Data);
-    var byteArrays = [];
+function base64ToBlob(b64Data, contentType, sliceSize) {
+  contentType = contentType || '';
+  sliceSize = sliceSize || 512;
 
-    for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-        var slice = byteCharacters.slice(offset, offset + sliceSize);
+  var byteCharacters = atob(b64Data);
+  var byteArrays = [];
 
-        var byteNumbers = new Array(slice.length);
-        for (var i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
-        }
+  for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+    var slice = byteCharacters.slice(offset, offset + sliceSize);
 
-        var byteArray = new Uint8Array(byteNumbers);
-
-        byteArrays.push(byteArray);
+    var byteNumbers = new Array(slice.length);
+    for (var i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
     }
 
-    var blob = new Blob(byteArrays, {type: contentType});
-    return blob;
+    var byteArray = new Uint8Array(byteNumbers);
+
+    byteArrays.push(byteArray);
+  }
+
+  var blob = new Blob(byteArrays, {type: contentType});
+  return blob;
+}
+
+Boolean.prototype.btoa = function() {
+    return btoa(unescape(encodeURIComponent(this+"")));
 };
-window.prependToArray = function(value,array){
-    var newArray = array.slice();
-    newArray.unshift(value);
-    return newArray;
+Boolean.prototype.atob = function() {
+    return decodeURIComponent(escape(atob(this+"")));
 };
 
-window.Url = function(string){
+prependToArray=function(value,array){
+  var newArray = array.slice();
+  newArray.unshift(value);
+  return newArray;
+};
+
+Array.prototype.btoa = function() {
+    return btoa(unescape(encodeURIComponent(this+"")));
+};
+Array.prototype.atob = function() {
+    return decodeURIComponent(escape(atob(this+"")));
+};
+
+Number.prototype.btoa = function() {
+    return btoa(unescape(encodeURIComponent(this+"")));
+};
+Number.prototype.atob = function() {
+    return decodeURIComponent(escape(atob(this+"")));
+};
+
+String.prototype.btoa = function() {
+    return btoa(unescape(encodeURIComponent(this)));
+};
+String.prototype.atob = function() {
+    return decodeURIComponent(escape(atob(this)));
+};
+String.prototype.capitalize = function() {
+    return this.replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+};
+
+String.prototype.parseInt=function(){
+  return parseInt(this);
+};
+
+function Url(string){
     return "url(\""+string+"\")";
-};
+}
 
-window.Percent = function(value){
+function Percent(value){
     return value+"%";
-};
+}
 
-window.Pixel = function(value){
+function Pixel(value){
     return value+"px";
-};
+}
 
-window.Rgb = function(red,green,blue){
+function Rgb(red,green,blue){
     return new String("rgb("+red+","+green+","+blue+")");
-};
+}
 
-window.Rgba = function(red,green,blue,alfa){
+function Rgba(red,green,blue,alfa){
     return new String("rgba("+red+","+green+","+blue+","+alfa+")");
-};
+}
 
-window.Popup = function(url,title=null,i={}) {
+function Popup(url,title=null,i={}) {
 
-    if(i.toolbar){
-        if(i.toolbar) i.toolbar = 'yes';
-        if(!i.toolbar) i.toolbar = 'no';
+    if(isset(i.toolbar)){
+    	if(i.toolbar) i.toolbar = 'yes';
+    	if(!i.toolbar) i.toolbar = 'no';
     }else i.toolbar = 'no';
 
-    if(i.location){
-        if(i.location) i.location = 'yes';
-        if(!i.location) i.location = 'no';
+    if(isset(i.location)){
+    	if(i.location) i.location = 'yes';
+    	if(!i.location) i.location = 'no';
     }else i.location = 'no';
 
-    if(i.directories){
-        if(i.directories) i.directories = 'yes';
-        if(!i.directories) i.directories = 'no';
+    if(isset(i.directories)){
+    	if(i.directories) i.directories = 'yes';
+    	if(!i.directories) i.directories = 'no';
     }else i.directories = 'no';
 
-    if(i.status){
-        if(i.status) i.status = 'yes';
-        if(!i.status) i.status = 'no';
+    if(isset(i.status)){
+    	if(i.status) i.status = 'yes';
+    	if(!i.status) i.status = 'no';
     }else i.status = 'no';
 
-    if(i.menubar){
-        if(i.menubar) i.menubar = 'yes';
-        if(!i.menubar) i.menubar = 'no';
+    if(isset(i.menubar)){
+    	if(i.menubar) i.menubar = 'yes';
+    	if(!i.menubar) i.menubar = 'no';
     }else i.menubar = 'no';
 
-    if(i.scrollbars){
-        if(i.scrollbars) i.scrollbars = 'yes';
-        if(!i.scrollbars) i.scrollbars = 'no';
+    if(isset(i.scrollbars)){
+    	if(i.scrollbars) i.scrollbars = 'yes';
+    	if(!i.scrollbars) i.scrollbars = 'no';
     }else i.scrollbars = 'no';
 
-    if(i.resizable){
-        if(i.resizable) i.resizable = 'yes';
-        if(!i.resizable) i.resizable = 'no';
+    if(isset(i.resizable)){
+    	if(i.resizable) i.resizable = 'yes';
+    	if(!i.resizable) i.resizable = 'no';
     }else i.resizable = 'no';
 
-    if(i.copyhistory){
-        if(i.copyhistory) i.copyhistory = 'yes';
-        if(!i.copyhistory) i.copyhistory = 'no';
+    if(isset(i.copyhistory)){
+    	if(i.copyhistory) i.copyhistory = 'yes';
+    	if(!i.copyhistory) i.copyhistory = 'no';
     }else i.copyhistory = 'no';
 
-    if(!i.width) i.width = 800;
-    if(!i.height) i.height = 500;
+    if(!isset(i.width)) i.width = 800;
+    if(!isset(i.height)) i.height = 500;
 
 
     i.left = (screen.width/2)-(i.width/2);
     i.top = (screen.height/2)-(i.height/2);
 
     return window.open(url, title,
-            'toolbar='+i.toolbar+', '+
-            'location='+i.location+', '+
-            'directories='+i.directories+', '+
-            'status='+i.status+', '+
-            'menubar='+i.menubar+', '+
-            'scrollbars='+i.scrollbars+', '+
-            'resizable='+i.resizable+', '+
-            'copyhistory='+i.copyhistory+', '+
-            'width='+i.width+', '+
-            'height='+i.height+', '+
-            'top='+i.top+', '+
-            'left='+i.left+'');
-};
+    		'toolbar='+i.toolbar+', '+
+    		'location='+i.location+', '+
+    		'directories='+i.directories+', '+
+    		'status='+i.status+', '+
+    		'menubar='+i.menubar+', '+
+    		'scrollbars='+i.scrollbars+', '+
+    		'resizable='+i.resizable+', '+
+    		'copyhistory='+i.copyhistory+', '+
+    		'width='+i.width+', '+
+    		'height='+i.height+', '+
+    		'top='+i.top+', '+
+    		'left='+i.left+'');
+}
+
 
 
 /*
-INCLUDER STARTS
-*/
-window.Project={
-    workspace:'',
-    ready:false
-}
-window.workspace = window.Project.workspace;
+ INCLUDER STARTS
+ */
+window.use = new Includer({
+    "components":"components",
+    "js":"js",
+    "css":"css"
+});
+function Includer(dir){
+    if(!dir) dir = {
+        css: "",
+        js: "",
+        components: ""
+    };
 
-window.include = {};
+    this.getComponentsLocation=function(){
+        return dir.components;
+    };
+    this.getJSLocation=function(){
+        return dir.js;
+    };
+    this.getCSSLocation=function(){
+        return dir.css;
+    };
+    var $this = this;
+    this.currentComponentRequest = null;
+    this.currentCSSRequest = null;
+    this.currentJavaScriptRequest = null;
+    this.js=function(value,version=0){
+        return include.js(dir.js,value,version,function(file){
+            $this.currentJavaScriptRequest = file;
+        });
+    };
+    this.css=function(value,version=0){
+        return include.css(dir.css,value,version,function(file){
+            $this.currentCSSRequest = file;
+        });
+    };
+    this.component=function(value,apply=true,version=0){
+        return include.component(dir.components,value,apply,version,function(mod){
+            $this.currentComponentRequest = mod;
+        });
+    };this.components = this.component;
+};
 
-        
+function include(){}
 window.components = new Array();
-window.include.components = async function(dir,list,apply=true,version=0,f){
+include.components = async function(dir,list,apply=true,version=0,f){
     if(typeof list =="string")
     list = [list];
 
@@ -562,9 +769,9 @@ window.include.components = async function(dir,list,apply=true,version=0,f){
     }
     return null;
 };
-window.include.component = window.include.components;
+include.component = include.components;
 
-window.include.css = function(dir,list,version=0,f){
+include.css = function(dir,list,version=0,f){
     if(typeof list === "string")
         list = [list];
 
@@ -603,7 +810,7 @@ window.include.css = function(dir,list,version=0,f){
 
 };
 
-window.include.js = function(dir,list,version=0,f){
+include.js = function(dir,list,version=0,f){
     if(typeof list === "string")
         list = [list];
 
@@ -641,158 +848,6 @@ window.include.js = function(dir,list,version=0,f){
         }
     });
 };
-window.Includer = function(dir){
-    if(!dir) dir = {
-        css: "",
-        js: "",
-        components: ""
-    };
-
-    this.getComponentsLocation=function(){
-        return dir.components;
-    };
-    this.getJSLocation=function(){
-        return dir.js;
-    };
-    this.getCSSLocation=function(){
-        return dir.css;
-    };
-    var $this = this;
-    this.currentComponentRequest = null;
-    this.currentCSSRequest = null;
-    this.currentJavaScriptRequest = null;
-    this.js=function(value,version=0){
-        return include.js(dir.js,value,version,function(file){
-            $this.currentJavaScriptRequest = file;
-        });
-    };
-    this.css=function(value,version=0){
-        return include.css(dir.css,value,version,function(file){
-            $this.currentCSSRequest = file;
-        });
-    };
-    this.component=function(value,apply=true,version=0){
-        return include.component(dir.components,value,apply,version,function(mod){
-            $this.currentComponentRequest = mod;
-        });
-    };this.components = this.component;
-};
-window.use = new window.Includer({
-    "components":"components",
-    "js":"js",
-    "css":"css"
-});
 /*
 INCLUDER ENDS
-*/
-    
-Array.prototype.remove = function(deleteValue) {
-    for (var i = 0; i < this.length; i++) {
-        if (this[i] == deleteValue) {
-        this.splice(i, 1);
-        i--;
-        }
-    }
-    return this;
-};
-
-String.prototype.splice = function(start, delCount, newSubStr) {
-    return this.slice(0, start) + newSubStr + this.slice(start + Math.abs(delCount));
-};
-
-String.prototype.capitalize = function() {
-    return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
-}
-
-Element.prototype.clear=function(){
-    this.innerHTML = "";
-};
-
-Element.prototype.remove=function(){
-    this.oldParent = this.parentElement;
-    this.parentElement.removeChild(this);
-};
-Element.prototype.restore=function(){
-    this.oldParent.appendChild(this);
-};
-
-Element.prototype.applyHtml=async function(data,allowVariables){
-    await applyHtml(this,data,allowVariables);
-};
-
-Element.prototype.insertChildAtIndex = function(child, index) {
-    if (!index) index = 0
-    if (index >= this.children.length) {
-        this.appendChild(child)
-    } else {
-        this.insertBefore(child, this.children[index])
-    }
-};
-
-Number.prototype.truncate=function(places){
-    if(Math.trunc) return this;
-        return Math.trunc(this * Math.pow(10, places)) / Math.pow(10, places);
-};
-
-Boolean.prototype.btoa = function() {
-        return btoa(unescape(encodeURIComponent(this+"")));
-};
-Boolean.prototype.atob = function() {
-        return decodeURIComponent(escape(atob(this+"")));
-};
-
-Array.prototype.btoa = function() {
-        return btoa(unescape(encodeURIComponent(this+"")));
-};
-Array.prototype.atob = function() {
-    return decodeURIComponent(escape(atob(this+"")));
-};
-
-Number.prototype.btoa = function() {
-    return btoa(unescape(encodeURIComponent(this+"")));
-};
-Number.prototype.atob = function() {
-    return decodeURIComponent(escape(atob(this+"")));
-};
-
-String.prototype.btoa = function() {
-    return btoa(unescape(encodeURIComponent(this)));
-};
-String.prototype.atob = function() {
-    return decodeURIComponent(escape(atob(this)));
-};
-String.prototype.capitalize = function() {
-    return this.replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
-};
-
-String.prototype.parseInt=function(){
-    return parseInt(this);
-};
-
-
-
-
-document.head.appendChild(create("style",
-    "@keyframes clickeffect {"
-        +"from {"
-            +"opacity: 0.7;"
-            +"transform: scale(0);"
-        +"}"
-        +"to {"
-                +"opacity: 0;"
-                +"transform: scale(2);"
-        +"}"
-    +"}"
-
-    +"@-webkit-keyframes clickeffect {"
-        +"from {"
-            +"opacity: 0.7;"
-            +"transform: scale(0);"
-        +"}"
-        +"to {"
-            +"opacity: 0;"
-            +"transform: scale(2);"
-        +"}"
-    +"}"
-    )
-);
+ */
