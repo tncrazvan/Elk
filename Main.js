@@ -123,7 +123,7 @@ async function parseElement(item,allowVariables){
     if(item.hasAttribute("import")){
         const importName = item.getAttribute("import").split("=>");
         const componentName = importName[0].trim();
-        if(importName[1].trim() === "*"){
+        if(importName.length === 1 || importName[1].trim() === "*"){
             const req = await use.component(componentName,false);
             item.applyHtml(req,allowVariables);
         }else{
