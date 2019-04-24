@@ -63,9 +63,9 @@ function isElement(obj) {
   }
 }
 
-function create(tag,content,options,allowVariables){
+function create(tag,content,options,allowVariables,extra={}){
     tag = tag.split(".");
-    var element;
+    let element;
     for(let i = 0; i < tag.length; i++){
         if(i === 0){
             tmp = tag[i].split("#");
@@ -97,7 +97,7 @@ function create(tag,content,options,allowVariables){
             }
         }
       }else{
-        element.applyHtml(content,allowVariables);
+        element.applyHtml(content,allowVariables,extra);
       }
     }
 
@@ -115,7 +115,7 @@ function insertAfter(newNode, referenceNode) {
 }
 
 
-async function parseElement(item,allowVariables){
+async function parseElement(item,allowVariables,extra={}){
     //if this current element has an "id" attribute set to something...
     if(item.hasAttribute("id")){
         window[item.getAttribute("id")] = item;
@@ -125,7 +125,7 @@ async function parseElement(item,allowVariables){
         const componentName = importName[0].trim();
         if(importName.length === 1 || importName[1].trim() === "*"){
             const req = await use.component(componentName,false);
-            item.applyHtml(req,allowVariables);
+            item.applyHtml(req,allowVariables,{componentName:componentName});
         }else{
             const selectors = importName[1].trim().split(",");
             for(let i=0;i<selectors.length;i++){
@@ -133,7 +133,7 @@ async function parseElement(item,allowVariables){
                 const req = await use.component(componentName);
                 const selected = req[componentName].querySelector(selector);
                 if(selected === null) continue;
-                if(selected.tagName === "SCRIPT" && !selected.hasAttribute("src")){
+                if(selected.tagName === "SCRIPT"){
                     if(selected.hasAttribute("src")){
                         await use.js("@"+selected.getAttribute("src"));
                     }else{
@@ -150,7 +150,7 @@ async function parseElement(item,allowVariables){
             }
         }
     }else if(item.children.length > 0){
-        await recursiveParser(item,allowVariables);
+        await recursiveParser(item,allowVariables,extra);
     }
     
     if(item.hasAttribute("export")){
@@ -160,12 +160,15 @@ async function parseElement(item,allowVariables){
         }else if(window[item.hasAttribute("onload")]){
             await (window[item.getAttribute("onload")])();
         }
+    }
 
+    if(extra.componentName && item.hasAttribute("script")){
+        await use.js("@components/"+extra.componentName+"/../"+item.getAttribute("script"));
     }
 }
 
 //iterating through every child node of the provided target
-async function recursiveParser(target,allowVariables){
+async function recursiveParser(target,allowVariables,extra={}){
     const tmp = new Array();
     await foreach(target.children,child=>{
         tmp.push(child);
@@ -190,7 +193,14 @@ async function recursiveParser(target,allowVariables){
                     const blue = options[2]?options[2]:255;
                     addClickEffect(child,red,green,blue);
                 }
-                await parseElement(child,allowVariables);
+                await parseElement(child,allowVariables,extra);
+                /*if(child.hasAttribute("script")){
+                    if(extra.componentName){
+                        await use.js("@"+extra.componentName+"/"+child.getAttribute("script"));
+                    }else{
+                        await use.js("@"+child.getAttribute("script"));
+                    }
+                }*/
             break;
         }
     });
@@ -322,7 +332,7 @@ let isMobile = {
     }
 };
 
-async function applyHtml(target,data,allowVariables){
+async function applyHtml(target,data,allowVariables,extra={}){
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
@@ -333,10 +343,9 @@ async function applyHtml(target,data,allowVariables){
     //temporary parent element
     //I'm using this to throw in the result data
     //and parse it as child nodes.
-
     allowVariables = (isset(allowVariables)?allowVariables:false);
     target.innerHTML = data;
-    await recursiveParser(target,allowVariables);
+    await recursiveParser(target,allowVariables,extra);
 }
 
 function foreachChild(children,f){
@@ -515,8 +524,8 @@ Element.prototype.remove=function(){
     this.parentElement.removeChild(this);
 };
 
-Element.prototype.applyHtml=async function(data,allowVariables){
-  await applyHtml(this,data,allowVariables);
+Element.prototype.applyHtml=async function(data,allowVariables,extra={}){
+  await applyHtml(this,data,allowVariables,extra);
 };
 
 Element.prototype.insertChildAtIndex = function(child, index) {
@@ -764,8 +773,7 @@ include.components = async function(dir,list,apply=true,version=0,f){
             }
             const text = await req.text();
             if(apply){
-                const o = create("component",text);
-                o.setAttribute("name",file);
+                const o = create("component",text,{},true,{componentName:file});
                 components[file] = o;
                 currentList[file] = o;
                 (f)(file,o);
