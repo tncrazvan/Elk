@@ -47,40 +47,30 @@ ON JAVA SIDE:
 
 */
 
-VoiceGroup.location = use.currentJavaScriptRequest;
-function VoiceGroup(uri,start_recording,start_listening,mtu){
+function VoiceGroup(start_recording,start_listening,workerLocation = "js/Elk/VoiceGroupWorker.js",mtu){
   const CONNECTED = 0, DISCONNECTED = 1;
-  var $this = this;
-  var onDisconnect = function(){};
-  var onConnect = function(){};
-  var recording = start_recording || false;
-  var listening = start_listening || false;
+  let $this = this;
+  let onDisconnect = function(){};
+  let onConnect = function(){};
+  let recording = start_recording || false;
+  let listening = start_listening || false;
   let inputBuffer = new Array();
   let inputPreBuffer = new Array();
   let up_traffic = 0;
   let down_traffic = 0;
-  var d = new Date();
+  let d = new Date();
   let listeningTime = null;
   let workerConnected = false;
 
 
   let audioType = 'audio/mpeg; codecs=opus';
-  let workerLocation = "";
-  foreach(VoiceGroup.location.split("/"),function(node,i,isLast){
-    if(isLast){
-      workerLocation +="VoiceGroupWorker.js";
-    }else{
-      workerLocation +=node+"/"
-    }
-  });
+
   let w = new Worker(workerLocation);
-  w.postMessage({
-    connect:uri
-  });
+
   let metadata = "data:"+audioType+";base64,";
   let sound = new Audio();
-  var readerInput = new FileReader();
-
+  let readerInput = new FileReader();
+  
   w.onmessage=function(e){
     if(e.data.status === DISCONNECTED){
       workerConnected = false;
@@ -104,50 +94,57 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
   if (navigator.mediaDevices) {
     console.log('getUserMedia supported.');
 
-    var constraints = { audio: true };
-    var BUFF_SIZE = mtu || 1024;
-    var audioContext = new AudioContext();
+    let constraints = { audio: true };
+    let BUFF_SIZE = mtu || 1024;
+    let audioContext = new AudioContext();
     console.log("BUFFER_SIZE:",BUFF_SIZE);
     navigator.mediaDevices
     .getUserMedia(constraints)
     .then(function(stream) {
 
-      var source = audioContext.createMediaStreamSource(stream);
-      var node = source.context.createGain(BUFF_SIZE, 1, 1);
-      var processor = source.context.createScriptProcessor(BUFF_SIZE,1,1);
+      let source = audioContext.createMediaStreamSource(stream);
+      let node = source.context.createGain(BUFF_SIZE, 1, 1);
+      let processor = source.context.createScriptProcessor(BUFF_SIZE,1,1);
       let output, input;
-
+      
       (function poll(){
         if(inputPreBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
           readerInput.readAsArrayBuffer(inputPreBuffer[0]);
           readerInput.onloadend = function(){
             try{
-              inputBuffer.push(new Float32Array(readerInput.result));
+              if(inputBuffer.length >= 2){
+                inputBuffer[inputBuffer.length-1] = new Float32Array(readerInput.result);
+              }else{
+                inputBuffer.push(new Float32Array(readerInput.result));
+              }
             }catch(exception){
               console.log("exception:"+exception);
             }
             inputPreBuffer.splice(0,1);
-            setTimeout(function(){poll()},0);
+            //setTimeout(poll,0);
+            poll();
           };
         }else{
-          setTimeout(function(){poll()},0);
+          setTimeout(poll,0);
+          //poll();
         }
       })();
-
       processor.onaudioprocess = function(e){
         output = e.outputBuffer.getChannelData(0);
         input = e.inputBuffer.getChannelData(0);
 
+        
+
         if(inputBuffer.length > 0){
-          foreach(inputBuffer[0],function(item,i){
+          inputBuffer[0].forEach(function(item,i){
             output[i] = (i===0?0:item);
           });
-          if(inputBuffer.length > 10){
-            inputBuffer.splice(0,9);
-          }else{
-            inputBuffer.splice(0,1);
+          
+          inputBuffer.splice(0,1);
+        }else{
+          for(let i=0; i < output.length; i++){
+            output[i] = 0;
           }
-          console.log(inputBuffer.length);
         }
 
         /*if(inputBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
@@ -163,7 +160,6 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
             inputBuffer.splice(0,1);
           };
         }*/
-
         if(recording && workerConnected) {
           up_traffic +=input.length;
           w.postMessage(input);
@@ -181,6 +177,8 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
     .catch(function(err) {
      console.error('The following error occurred: ' + err);
    });
+  }else{
+    console.log("media device not supported");
   }
 
   this.startRecording=function(){
@@ -205,8 +203,11 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
     w.postMessage({disconnect:true});
   };
 
-  this.connect=function(uri){
-    w.postMessage({connect:uri});
+  this.connect=function(postUri,getUri){
+    w.postMessage({connect:{
+      postUri:postUri,
+      getUri:getUri
+    }});
   };
 
   this.reconnect=function(){
@@ -232,6 +233,9 @@ function VoiceGroup(uri,start_recording,start_listening,mtu){
   };
 
   this.getUri=function(){
-    return uri;
+    return {
+      postUri:postUri,
+      getUri:getUri
+    };
   };
 }

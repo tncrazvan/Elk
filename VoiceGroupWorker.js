@@ -19,27 +19,61 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-let ws = null;
+let post = null;
+let get = null;
 const CONNECTED = 0, DISCONNECTED = 1;
 self.onmessage=function(e){
   if(e.data.connect){
-    ws = new WebSocket(e.data.connect);
-    ws.onopen=function(e){
-      postMessage({status: CONNECTED});
-      console.log("Connected to VoiceGroup");
-    };
-    ws.onmessage=function(e){
+    let connection = e.data.connect;
+    if(connection.postUri !== null){
+      connectPost(connection,function(){
+        if(connection.getUri !== null){
+          connectGet(connection,function(){
+            postMessage({status: CONNECTED});
+          });
+        }else{
+          postMessage({status: CONNECTED});
+        }
+      });
+    }else if(connection.getUri !== null){
+      connectGet(connection,function(){
+        postMessage({status: CONNECTED});
+      });
+    }
+  }else if(e.data.disconnect){
+    post.close();
+    get.close();
+  }else{
+    post.send(e.data);
+  }
+};
+
+function connectGet(connection,f=()=>{}){
+  get = new WebSocket(connection.getUri);
+  get.onopen=function(e){
+    console.log("Connected to VoiceGet");
+
+    get.onmessage=function(e){
       //console.log("Received from server",e.data);
       postMessage(e.data);
     };
-    ws.onclose=function(e){
+    get.onclose=function(e){
       postMessage({status: DISCONNECTED});
-      console.log("Disconnected from VoiceGroup");
+      console.log("Disconnected from VoiceGet");
     };
+    (f)();
+  };
+}
 
-  }else if(e.data.disconnect){
-    ws.close();
-  }else {
-    ws.send(e.data);
-  }
-};
+function connectPost(connection,f=()=>{}){
+  post = new WebSocket(connection.postUri);
+  post.onopen=function(e){
+    console.log("Connected to VoicePost");
+
+    post.onclose=function(e){
+      postMessage({status: DISCONNECTED});
+      console.log("Disconnected from VoicePost");
+    };
+    (f)();
+  };
+}
