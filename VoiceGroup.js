@@ -54,8 +54,7 @@ function VoiceGroup(start_recording,start_listening,workerLocation = "js/Elk/Voi
   let onConnect = function(){};
   let recording = start_recording || false;
   let listening = start_listening || false;
-  let inputBuffer = new Array();
-  let inputPreBuffer = new Array();
+  let inputBuffer;
   let up_traffic = 0;
   let down_traffic = 0;
   let d = new Date();
@@ -65,37 +64,19 @@ function VoiceGroup(start_recording,start_listening,workerLocation = "js/Elk/Voi
 
   let audioType = 'audio/mpeg; codecs=opus';
 
-  let w = new Worker(workerLocation);
 
   let metadata = "data:"+audioType+";base64,";
   let sound = new Audio();
-  let readerInput = new FileReader();
   
-  w.onmessage=function(e){
-    if(e.data.status === DISCONNECTED){
-      workerConnected = false;
-      (onDisconnect)();
-    }else if(e.data.status === CONNECTED){
-      workerConnected = true;
-      (onConnect);
-    }else{
-      if(listening && workerConnected){
-        down_traffic += e.data.size;
-        inputPreBuffer.push(e.data);
-      }
-    }
-  };
-
-
+  let playingData = false;
   navigator.getUserMedia = navigator.getUserMedia ||
                            navigator.webkitGetUserMedia ||
                            navigator.mozGetUserMedia;
-
+  let localAudio;
   if (navigator.mediaDevices) {
     console.log('getUserMedia supported.');
-
     let constraints = { audio: true };
-    let BUFF_SIZE = mtu || 1024;
+    let BUFF_SIZE = mtu || 4096;
     let audioContext = new AudioContext();
     console.log("BUFFER_SIZE:",BUFF_SIZE);
     navigator.mediaDevices
@@ -106,69 +87,30 @@ function VoiceGroup(start_recording,start_listening,workerLocation = "js/Elk/Voi
       let node = source.context.createGain(BUFF_SIZE, 1, 1);
       let processor = source.context.createScriptProcessor(BUFF_SIZE,1,1);
       let output, input;
-      
+
       (function poll(){
-        if(inputPreBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
-          readerInput.readAsArrayBuffer(inputPreBuffer[0]);
-          readerInput.onloadend = function(){
-            try{
-              if(inputBuffer.length >= 2){
-                inputBuffer[inputBuffer.length-1] = new Float32Array(readerInput.result);
-              }else{
-                inputBuffer.push(new Float32Array(readerInput.result));
-              }
-            }catch(exception){
-              console.log("exception:"+exception);
-            }
-            inputPreBuffer.splice(0,1);
-            //setTimeout(poll,0);
-            poll();
-          };
-        }else{
-          setTimeout(poll,0);
-          //poll();
+        if(localAudio){
+          post.send(localAudio.slice());
         }
+        setTimeout(poll,20);
       })();
+
       processor.onaudioprocess = function(e){
         output = e.outputBuffer.getChannelData(0);
         input = e.inputBuffer.getChannelData(0);
-
-        
-
-        if(inputBuffer.length > 0){
-          inputBuffer[0].forEach(function(item,i){
+        if(inputBuffer){
+          playingData = true;
+          inputBuffer.slice().forEach(function(item,i){
             output[i] = (i===0?0:item);
           });
-          
-          inputBuffer.splice(0,1);
+          playingData = false;
         }else{
           for(let i=0; i < output.length; i++){
             output[i] = 0;
           }
         }
 
-        /*if(inputBuffer.length > 0 && workerConnected && readerInput.readyState !== 1){
-          readerInput.readAsArrayBuffer(inputBuffer[0]);
-          readerInput.onloadend = function() {
-            foreach(new Float32Array(readerInput.result),function(item,i){
-              if(i === 0){
-                output[i] = 0;
-              }else{
-                output[i] = item;
-              }
-            });
-            inputBuffer.splice(0,1);
-          };
-        }*/
-        if(recording && workerConnected) {
-          up_traffic +=input.length;
-          w.postMessage(input);
-        }
-        /*console.log("TRAFFIC:",{
-          total: ((up_traffic+down_traffic)/1024/1024).truncate(1),
-          upload: (up_traffic/1024/1024).truncate(1),
-          download: (down_traffic/1024/1024).truncate(1)
-        });*/
+        if(recording && workerConnected) localAudio=input;
       }
       source.connect(processor);
       processor.connect(node);
@@ -200,18 +142,69 @@ function VoiceGroup(start_recording,start_listening,workerLocation = "js/Elk/Voi
 
   this.disconnect=function(){
     $this.stopListening();
-    w.postMessage({disconnect:true});
+    post.close();
+    get.close();
   };
+
+  let post = null;
+  let get = null;
 
   this.connect=function(postUri,getUri){
-    w.postMessage({connect:{
-      postUri:postUri,
-      getUri:getUri
-    }});
+    if(postUri !== null){
+      connectPost(postUri,function(){
+        if(getUri !== null){
+          connectGet(getUri,function(){
+            workerConnected = true;
+          });
+        }else{
+          workerConnected = true;
+        }
+      });
+    }else if(getUri !== null){
+      connectGet(getUri,function(){
+        workerConnected = true;
+      });
+    }
   };
 
+  let readerInput = new FileReader();
+  function connectGet(uri,f=()=>{}){
+    get = new WebSocket(uri);
+    get.onopen=function(e){
+      console.log("Connected to VoiceGet");
+      get.onmessage=function(e){
+        if(listening && workerConnected && !playingData){
+          down_traffic += e.data.size;
+          readerInput.readAsArrayBuffer(e.data);
+          readerInput.onloadend = function(){
+            inputBuffer = new Float32Array(readerInput.result);
+          };
+        }
+      };
+      get.onclose=function(e){
+        workerConnected = false;
+        (onDisconnect)(uri);
+        console.log("Disconnected from VoiceGet");
+      };
+      (f)();
+    };
+  }
+
+  function connectPost(uri,f=()=>{}){
+    post = new WebSocket(uri);
+    post.onopen=function(e){
+      console.log("Connected to VoicePost");
+      post.onclose=function(e){
+        workerConnected = false;
+        (onDisconnect)(uri);
+        console.log("Disconnected from VoicePost");
+      };
+      (f)();
+    };
+  }
+
   this.reconnect=function(){
-    $this.connect($this.getUri());
+    $this.connect($this.getUri().getUri,$this.getUri().postUri);
     return new Promise(function(resolve,reject){
       (function poll(){
         if(workerConnected){
