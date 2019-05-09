@@ -124,7 +124,7 @@ async function parseElement(item,allowVariables,extra={}){
         const importName = item.getAttribute("import").split("=>");
         const componentName = importName[0].trim();
         if(importName.length === 1 || importName[1].trim() === "*"){
-            const req = await use.component(componentName,false);
+            const req = await use.component(componentName,null,false);
             item.applyHtml(req,allowVariables,{componentName:componentName});
         }else{
             const selectors = importName[1].trim().split(",");
@@ -154,16 +154,23 @@ async function parseElement(item,allowVariables,extra={}){
     }
     
     if(item.hasAttribute("export")){
-        window[item.getAttribute("export").trim()].appendChild(item);
+        let exportTarget = item.getAttribute("export").trim();
+        if(exportTarget !== ""){
+            window[exportTarget].appendChild(item);
+            if(extra.componentName && item.hasAttribute("use")){
+                await use.js(item.getAttribute("use"));
+            }
+        }else if(extra.bindElement){
+            extra.bindElement.appendChild(item);
+            if(extra.componentName && item.hasAttribute("use")){
+                await use.js(item.getAttribute("use"));
+            }
+        }
         if(item.onload){
             await (item.onload)();
         }else if(window[item.hasAttribute("onload")]){
             await (window[item.getAttribute("onload")])();
         }
-    }
-
-    if(extra.componentName && item.hasAttribute("script")){
-        await use.js("@components/"+extra.componentName+"/../"+item.getAttribute("script"));
     }
 }
 
@@ -742,8 +749,8 @@ function Includer(dir){
             $this.currentCSSRequest = file;
         });
     };
-    this.component=function(value,apply=true,version=0){
-        return include.component(dir.components,value,apply,version,function(mod){
+    this.component=function(value,bindElement,apply=true,version=0){
+        return include.component(dir.components,value,bindElement,apply,version,function(mod){
             $this.currentComponentRequest = mod;
         });
     };this.components = this.component;
@@ -751,7 +758,7 @@ function Includer(dir){
 
 function include(){}
 window.components = new Array();
-include.components = async function(dir,list,apply=true,version=0,f){
+include.components = async function(dir,list,bindElement,apply=true,version=0,f){
     if(typeof list =="string")
     list = [list];
 
@@ -773,7 +780,7 @@ include.components = async function(dir,list,apply=true,version=0,f){
             }
             const text = await req.text();
             if(apply){
-                const o = create("component",text,{},true,{componentName:file});
+                const o = create("component",text,{},true,{componentName:file,bindElement:bindElement});
                 components[file] = o;
                 currentList[file] = o;
                 (f)(file,o);
