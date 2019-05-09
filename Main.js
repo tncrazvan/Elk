@@ -757,17 +757,17 @@ function Includer(dir){
 };
 
 function include(){}
-window.components = new Array();
+window.components = {};
 include.components = async function(dir,list,bindElement,apply=true,version=0,f){
     if(typeof list =="string")
     list = [list];
 
     if(dir === "") dir = "/components/";
     if(dir[dir.length-1] !== "/"){
-    dir +="/";
+        dir +="/";
     }
     f = f || function(){};
-    const currentList = new Array();
+    const currentList = {};
     let length = list.length;
     if(length>0){
         for(let i = 0; i<length; i++){
@@ -780,10 +780,11 @@ include.components = async function(dir,list,bindElement,apply=true,version=0,f)
             }
             const text = await req.text();
             if(apply){
-                const o = create("component",text,{},true,{componentName:file,bindElement:bindElement});
-                components[file] = o;
-                currentList[file] = o;
-                (f)(file,o);
+                const componentName = file +"#"+(Object.keys(components).length+1);
+                const o = create("component",text,{},true,{componentName:componentName,bindElement:bindElement});
+                components[componentName] = o;
+                currentList[componentName] = o;
+                (f)(componentName,o);
             }else{
                 return text;
             }
