@@ -65,7 +65,7 @@ function isElement(obj) {
   }
 }
 
-function create(tag,content,options,allowVariables,extra={}){
+async function create(tag,content,options,allowVariables,extra={}){
     tag = tag.split(".");
     let element;
     for(let i = 0; i < tag.length; i++){
@@ -99,7 +99,7 @@ function create(tag,content,options,allowVariables,extra={}){
             }
         }
       }else{
-        element.applyHtml(content,allowVariables,extra);
+        await element.applyHtml(content,allowVariables,extra);
       }
     }
 
@@ -206,7 +206,7 @@ async function recursiveParser(target,allowVariables,extra={}){
                     const red = options[0]?options[0]:255;
                     const green = options[1]?options[1]:255;
                     const blue = options[2]?options[2]:255;
-                    addClickEffect(child,red,green,blue);
+                    await addClickEffect(child,red,green,blue);
                 }
                 if(child.hasAttribute("tailwind")){
                     const key = child.getAttribute("tailwind");
@@ -229,10 +229,10 @@ async function recursiveParser(target,allowVariables,extra={}){
     });
 }
 addClickEffect.first = true;
-function addClickEffect(element,r=255,g=255,b=255){
+async function addClickEffect(element,r=255,g=255,b=255){
     if(addClickEffect.first){
         addClickEffect.first = false;
-        document.head.appendChild(create("style",
+        document.head.appendChild(await create("style",
             "@keyframes clickeffect {"
                 +"from {"
                     +"opacity: 0.7;"
@@ -258,10 +258,10 @@ function addClickEffect(element,r=255,g=255,b=255){
         );
     }
 
-    const playRippleEffect = function(x,y,maxRadius){
+    const playRippleEffect = async function(x,y,maxRadius){
         element.style.transition = "background-color 100ms";
         element.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
-        const canvas = create("canvas","",{
+        const canvas = await create("canvas","",{
             width: element.offsetWidth,
             height: element.offsetHeight
         });
@@ -311,10 +311,10 @@ function addClickEffect(element,r=255,g=255,b=255){
         element.addEventListener("touchstart",function(e){
             playBackgroundEffect();
         });
-        element.addEventListener("touchend",function(e){
+        element.addEventListener("touchend",async function(e){
             let pos = element.getBoundingClientRect();
 
-            playRippleEffect(e.changedTouches[0].clientX-pos.x,e.changedTouches[0].clientY-pos.y,element.offsetWidth);
+            await playRippleEffect(e.changedTouches[0].clientX-pos.x,e.changedTouches[0].clientY-pos.y,element.offsetWidth);
         });
         element.addEventListener("touchcancel",function(e){
             element.style.transition = "background-color 100ms";
@@ -324,8 +324,8 @@ function addClickEffect(element,r=255,g=255,b=255){
         element.addEventListener("mousedown",function(e){
             playBackgroundEffect();
         });
-        element.addEventListener("mouseup",function(e){
-            playRippleEffect(e.offsetX,e.offsetY,element.offsetWidth);
+        element.addEventListener("mouseup",async function(e){
+            await playRippleEffect(e.offsetX,e.offsetY,element.offsetWidth);
         });
         element.addEventListener("mouseout",function(e){
             element.style.transition = "background-color 100ms";
@@ -537,6 +537,10 @@ function selectText(container) {
         window.getSelection().addRange(range);
     }
 }
+
+Element.prototype.view=function(componentName,stateName){
+    view(componentName,stateName,this);
+};
 
 Element.prototype.clear=function(){
   this.innerHTML = "";
@@ -797,7 +801,7 @@ include.components = async function(dir,list,bindElement,apply=true,version=0,f)
             const text = await req.text();
             if(apply){
                 const componentName = file +"#"+(Object.keys(components).length+1);
-                const o = create("component",text,{},true,{componentName:componentName,bindElement:bindElement});
+                const o = await create("component",text,{},true,{componentName:componentName,bindElement:bindElement});
                 components[componentName] = o;
                 currentList[componentName] = o;
                 (f)(componentName,o);
@@ -891,3 +895,8 @@ include.js = function(dir,list,version=0,f){
 /*
 INCLUDER ENDS
  */
+
+async function view(componentName,stateUrl,toBeParentElement){
+    await use.component(componentName,toBeParentElement);
+    history.pushState({}, '', stateUrl);
+}
