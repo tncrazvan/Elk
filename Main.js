@@ -19,6 +19,8 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+const TAILWIND={};
+
 function isset(object){
     if(object!==undefined){
         return true;
@@ -156,11 +158,17 @@ async function parseElement(item,allowVariables,extra={}){
     if(item.hasAttribute("export")){
         let exportTarget = item.getAttribute("export").trim();
         if(exportTarget !== ""){
+            if(item.hasAttribute("replace")){
+                window[exportTarget].innerHTML="";
+            }
             window[exportTarget].appendChild(item);
             if(extra.componentName && item.hasAttribute("use")){
                 await use.js(item.getAttribute("use"));
             }
         }else if(extra.bindElement){
+            if(item.hasAttribute("replace")){
+                extra.bindElement.innerHTML="";
+            }
             extra.bindElement.appendChild(item);
             if(extra.componentName && item.hasAttribute("use")){
                 await use.js(item.getAttribute("use"));
@@ -200,14 +208,22 @@ async function recursiveParser(target,allowVariables,extra={}){
                     const blue = options[2]?options[2]:255;
                     addClickEffect(child,red,green,blue);
                 }
-                await parseElement(child,allowVariables,extra);
-                /*if(child.hasAttribute("script")){
-                    if(extra.componentName){
-                        await use.js("@"+extra.componentName+"/"+child.getAttribute("script"));
-                    }else{
-                        await use.js("@"+child.getAttribute("script"));
+                if(child.hasAttribute("tailwind")){
+                    const key = child.getAttribute("tailwind");
+                    if(TAILWIND[key]){
+                        TAILWIND[key].forEach(cls=>{
+                            const multiple = cls.split(/\s+/);
+                            if(multiple.length>1){
+                                multiple.forEach(single=>{
+                                    child.classList.add(single);
+                                });
+                            }else{
+                                child.classList.add(cls);
+                            }
+                        });
                     }
-                }*/
+                }
+                await parseElement(child,allowVariables,extra);
             break;
         }
     });
