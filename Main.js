@@ -77,22 +77,22 @@ const create=async function(tag,content,options,allowVariables,extra={}){
     }
     if(isset(content) && content !== null){
         if(isElement(content)){
-        element.innerHTML = "";
-        element.appendChild(content);
-        }else if(content.constructor.name === "Array"){
-        if(content.length > 0){
             element.innerHTML = "";
-            for(let i = 0; i<content.length; i++){
-                const item = content[i];
-                if(item.constructor.name == "String"){
-                    element.innerHTML += item;
-                }else{
-                    element.appendChild(item);
+            element.appendChild(content);
+        }else if(content.constructor.name === "Array"){
+            if(content.length > 0){
+                element.innerHTML = "";
+                for(let i = 0; i<content.length; i++){
+                    const item = content[i];
+                    if(item.constructor.name == "String"){
+                        element.innerHTML += item;
+                    }else{
+                        element.appendChild(item);
+                    }
                 }
             }
-        }
         }else{
-        await element.applyHtml(content,allowVariables,extra);
+            await element.applyHtml(content,allowVariables,extra);
         }
     }
 
@@ -170,6 +170,8 @@ const parseElement=async function(item,allowVariables,extra={}){
             await (window[item.getAttribute("onload")])();
         }
     }
+    resolveTailwind(item);
+    resolveState(item);
 };
 
 //iterating through every child node of the provided target
@@ -198,25 +200,32 @@ const recursiveParser=async function(target,allowVariables,extra={}){
                     const blue = options[2]?options[2]:255;
                     await addClickEffect(child,red,green,blue);
                 }
-                if(child.hasAttribute("tailwind")){
-                    const key = child.getAttribute("tailwind");
-                    if(TAILWIND[key]){
-                        TAILWIND[key].forEach(cls=>{
-                            const multiple = cls.split(/\s+/);
-                            if(multiple.length>1){
-                                multiple.forEach(single=>{
-                                    child.classList.add(single);
-                                });
-                            }else{
-                                child.classList.add(cls);
-                            }
-                        });
-                    }
-                }
                 await parseElement(child,allowVariables,extra);
             break;
         }
     });
+};
+const resolveState=function(element){
+    if(element.hasAttribute("state")){
+        history.pushState({}, '', element.getAttribute("state"));
+    }
+};
+const resolveTailwind=function(element){
+    if(element.hasAttribute("tailwind")){
+        const key = element.getAttribute("tailwind");
+        if(TAILWIND[key]){
+            TAILWIND[key].forEach(cls=>{
+                const multiple = cls.split(/\s+/);
+                if(multiple.length>1){
+                    multiple.forEach(single=>{
+                        element.classList.add(single);
+                    });
+                }else{
+                    element.classList.add(cls);
+                }
+            });
+        }
+    }
 };
 const addClickEffect=async function(element,r=255,g=255,b=255){
     if(addClickEffect.first){
@@ -625,6 +634,9 @@ const Includer=function(dir){
     this.currentComponentRequest = null;
     this.currentCSSRequest = null;
     this.currentJavaScriptRequest = null;
+    this.routes=async function(routes,pathname,eventualF=null){
+        return (await include.routes(routes,pathname,eventualF));
+    };this.route = this.routes;
     this.js=function(value,version=0){
         return include.js(dir.js,value,version,function(file){
             $this.currentJavaScriptRequest = file;
@@ -643,6 +655,31 @@ const Includer=function(dir){
 };
 
 const include={
+    routes:async function(routes,pathname,eventualF=null){
+        if(typeof routes === "string"){
+            let o = {};
+            o[routes]=eventualF;
+            return include.routes(o,pathname);
+        }
+        for(let key of Object.keys(routes)){
+            const ROUTE_REGEX = new RegExp(key,"i");
+            if(pathname.match(ROUTE_REGEX) !== null){
+                const ARGS = {
+                    path: pathname.replace(ROUTE_REGEX,""),
+                };
+                ARGS["args"] = ARGS.path.split("/");
+                if(ARGS["args"].length>0 && ARGS["args"][0] === ""){
+                    ARGS["args"]=[];
+                }else if(ARGS["args"].length>0){
+                    for(let i=0;i<ARGS["args"].length;i++){
+                        if(!isNaN(ARGS["args"][i])) ARGS["args"][i] = parseInt(ARGS["args"][i]);
+                    }
+                }
+                await (routes[key])(ARGS);
+                return;
+            }
+        }
+    },
     components:async function(dir,list,bindElement,apply=true,version=0,f){
         if(typeof list =="string")
         list = [list];
@@ -755,15 +792,15 @@ const include={
     }
 };
 include.component = include.components;
-const view=async function(componentName,stateUrl,toBeParentElement){
+const view=async function(componentName,stateUrl=null,toBeParentElement){
+    if(stateUrl!==null) history.pushState({}, '', stateUrl);
     await use.component(componentName,toBeParentElement);
-    history.pushState({}, '', stateUrl);
 };
 
 window.use = new Includer({
-    "components":"components",
-    "js":"js",
-    "css":"css"
+    "components":"/components",
+    "js":"/js",
+    "css":"/css"
 });
 window.components = {};
 
@@ -785,8 +822,8 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
 
-Element.prototype.view=function(componentName,stateName){
-    view(componentName,stateName,this);
+Element.prototype.view=async function(componentName,stateUrl=null){
+    await view(componentName,stateUrl,this);
 };
 
 Element.prototype.clear=function(){
