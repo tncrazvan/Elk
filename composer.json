@@ -1,15 +1,14 @@
 {
-	"name":"tncrazvan/elk",
-	"version":"1.0.0",
-	"type": "component",
-	"homepage": "https://github.com/tncrazvan/elk",
-	"license": "MIT",
-	"authors": [
-		{
-			"name": "Razvan Tanase",
-			"email": "tangent.jotey@gmail.com",
-			"homepage": "https://github.com/tncrazvan",
-			"role": "Developer"
-		}
-	]
+    "name": "tncrazvan/elk",
+    "description": "A JavaScript library used to handle HTML dom components",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "tncrazvan",
+            "email": "tangent.jotey@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
 }
