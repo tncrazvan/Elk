@@ -58,7 +58,7 @@ const isElement=function(obj) {
         (typeof obj.ownerDocument ==="object");
     }
 };
-const create=async function(tag,content,options,allowVariables,extra={}){
+const create=function(tag,content,options,allowVariables,extra={}){
     tag = tag.split(".");
     let element;
     for(let i = 0; i < tag.length; i++){
@@ -92,7 +92,10 @@ const create=async function(tag,content,options,allowVariables,extra={}){
                 }
             }
         }else{
-            await element.applyHtml(content,allowVariables,extra);
+            return new Promise(async function(resolve){
+                await element.applyHtml(content,allowVariables,extra);
+                (resolve)();
+            });
         }
     }
 
