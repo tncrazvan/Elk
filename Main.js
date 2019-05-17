@@ -103,10 +103,20 @@ const create=function(tag,content,options,allowVariables,extra={},async=false){
 
     if(options)
         for(let key in options){
-            element.setAttribute(key,options[key]);
+            if(typeof(options[key]) === "object" && key === "style"){
+                element.css(options[key]);
+            }else{
+                element.setAttribute(key,options[key]);
+            }
         }
         
 
+    return element;
+};
+const css = function(element,attributes={}){
+    for(let key in attributes){
+        element.style[key]=attributes[key];
+    }
     return element;
 };
 const insertAfter=function(newNode, referenceNode) {
@@ -800,6 +810,7 @@ include.component = include.components;
 const view=async function(componentName,stateUrl=null,toBeParentElement){
     if(stateUrl!==null) history.pushState({}, '', stateUrl);
     await use.component(componentName,toBeParentElement);
+    return toBeParentElement;
 };
 
 window.use = new Includer({
@@ -827,12 +838,17 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
 
+Element.prototype.css=function(attributes={}){
+    return css(this,attributes);
+};
+
 Element.prototype.view=async function(componentName,stateUrl=null){
-    await view(componentName,stateUrl,this);
+    return await view(componentName,stateUrl,this);
 };
 
 Element.prototype.clear=function(){
     this.innerHTML = "";
+    return this;
 };
 
 Element.prototype.remove=function(){
@@ -842,6 +858,7 @@ Element.prototype.remove=function(){
 
 Element.prototype.applyHtml=async function(data,allowVariables,extra={}){
     await applyHtml(this,data,allowVariables,extra);
+    return this;
 };
 
 Element.prototype.insertChildAtIndex = function(child, index) {
@@ -851,6 +868,7 @@ Element.prototype.insertChildAtIndex = function(child, index) {
     } else {
         this.insertBefore(child, this.children[index])
     }
+    return this;
 };
 
 Number.prototype.truncate=function(places){
