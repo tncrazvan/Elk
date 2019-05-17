@@ -58,7 +58,7 @@ const isElement=function(obj) {
         (typeof obj.ownerDocument ==="object");
     }
 };
-const create=function(tag,content,options,allowVariables,extra={}){
+const create=function(tag,content,options,allowVariables,extra={},async=false){
     tag = tag.split(".");
     let element;
     for(let i = 0; i < tag.length; i++){
@@ -91,11 +91,13 @@ const create=function(tag,content,options,allowVariables,extra={}){
                     }
                 }
             }
-        }else{
+        }else if(async){
             return new Promise(async function(resolve){
                 await element.applyHtml(content,allowVariables,extra);
                 (resolve)();
             });
+        }else{
+            element.applyHtml(content,allowVariables,extra)
         }
     }
 
@@ -706,7 +708,7 @@ const include={
                 const text = await req.text();
                 if(apply){
                     const componentName = file +"#"+(Object.keys(components).length+1);
-                    const o = await create("component",text,{},true,{componentName:componentName,bindElement:bindElement});
+                    const o = await create("component",text,{},true,{componentName:componentName,bindElement:bindElement},true);
                     components[componentName] = o;
                     currentList[componentName] = o;
                     (f)(componentName,o);
