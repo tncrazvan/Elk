@@ -19,6 +19,11 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+const state=function(...url){
+    let joined = url.join("/");
+    history.pushState({},'',joined);
+}
+
 const CLASS={};
 const isset=function(object){
     if(object!==undefined){
@@ -185,8 +190,7 @@ const parseElement=async function(item,allowVariables,extra={}){
             await (window[item.getAttribute("onload")])();
         }
     }
-    componentResolver(item);
-    resolveState(item);
+    resolveComponent(item,extra);
 };
 
 
@@ -221,17 +225,14 @@ const recursiveParser=async function(target,allowVariables,extra={}){
         }
     });
 };
-const resolveState=function(element){
-    if(element.hasAttribute("state")){
-        history.pushState({}, '', element.getAttribute("state"));
-    }
-};
+
 const Component={};
-const componentResolver=function(element){
+const resolveComponent=function(element,extra){
     const key = element.tagName;
     for ( let c in Component ) {
         if(c.toLowerCase() === key.toLowerCase()){
             try{
+                element.data = extra.bindElement.data;
                 let obj = (Component[c])(element);
                 break;
             }catch(e){
@@ -662,26 +663,43 @@ const Includer=function(dir){
             $this.currentCSSRequest = file;
         });
     };
-    this.component=function(value,bindElement,apply=true,version=0){
-        return include.component(dir.components,value,bindElement,apply,version,function(mod){
-            $this.currentComponentRequest = mod;
-            
+    this.component=async function(value,bindElement=null,data=null,stateUrl=null,version=0,apply=true){
+        if(stateUrl !== null) {
+            state(stateUrl);
+        }
+        let filename = value.split(/\//);
+        if(filename.length > 0){
+            filename = filename[filename.length-1];
+        }else{
+            filename = value;
+        }
+        const js = await this.js("@"+dir.components+"/"+value+"/"+filename+".js",version);
+        if(bindElement === null)
+            return js;
+        bindElement.data=data;
+        const component = await include.component(dir.components,value+"/"+filename,bindElement,version,apply,function(file){
+            $this.currentComponentRequest = file;
         });
+        return component;
     };this.components = this.component;
 };
 
-const include={
-    cache:{
-        components:{}
-    },
-    routes:async function(routes,pathname,eventualF=null){
-        if(typeof routes === "string"){
-            let o = {};
-            o[routes]=eventualF;
-            return include.routes(o,pathname);
+window.onpopstate=e=>{
+    e.preventDefault();
+    for(let key of Object.keys(include.cache.routes)){
+        const ROUTE_REGEX = new RegExp(key,"i");
+        const ARGS = include.tools.getArgs(ROUTE_REGEX);
+        if(ARGS !== null){
+            (include.cache.routes[key])(ARGS);
+            break;
         }
-        for(let key of Object.keys(routes)){
-            const ROUTE_REGEX = new RegExp(key,"i");
+    }
+};
+
+const include={
+    tools:{
+        getArgs: function(ROUTE_REGEX){
+            const pathname = location.pathname;
             if(pathname.match(ROUTE_REGEX) !== null){
                 const ARGS = {
                     path: pathname.replace(ROUTE_REGEX,""),
@@ -694,12 +712,35 @@ const include={
                         if(!isNaN(ARGS["args"][i])) ARGS["args"][i] = parseInt(ARGS["args"][i]);
                     }
                 }
-                await (routes[key])(ARGS);
-                return;
+                return ARGS;
+            }
+            return null;
+        }
+    },
+    cache:{
+        components:{},
+        js:{},
+        css:{},
+        routes:{}
+    },
+    routes:async function(routes,eventualF=null){
+        if(typeof routes === "string"){
+            let o = {};
+            o[routes]=eventualF;
+            return include.routes(o);
+        }
+        let executed = false;
+        for(let key of Object.keys(routes)){
+            const ROUTE_REGEX = new RegExp(key,"i");
+            const ARGS = include.tools.getArgs(ROUTE_REGEX);
+            include.cache.routes[key] = routes[key];
+            if(ARGS !== null && !executed){
+                executed = true;
+                await (include.cache.routes[key])(ARGS);
             }
         }
     },
-    components:async function(dir,list,bindElement,apply=true,version=0,f){
+    components:async function(dir,list,bindElement,version=0,apply=true,f){
         if(typeof list =="string")
         list = [list];
 
@@ -727,10 +768,10 @@ const include={
                 }
                 
                 if(apply){
-                    const componentName = file +"#"+(Object.keys(components).length+1);
+                    const componentName = file +"#"+(Object.keys(COMPONENTS).length+1);
                     const o = await create("component",text,{},true,{componentName:componentName,bindElement:bindElement},true);
-                    components[componentName] = o;
-                    currentList[componentName] = o;
+                    /*components[componentName] = o;
+                    currentList[componentName] = o;*/
                     (f)(componentName,o);
                 }else{
                     return text;
@@ -753,17 +794,27 @@ const include={
         return new Promise(function(resolve,reject){
             let i = 0, length = list.length;
             if(length>0){
-                (function poll(){
+                (async function poll(){
                     i++;
                     let file = list[i-1]; //without extension
-                    let style = document.createElement("link");
+
+                    let text;
+                    if(!include.cache.css[file]){
+                        if(file.charAt(0)==="@"){
+                            text = await fetch(file.replace(/@/g,""));
+                        }else{
+                            text = await fetch(dir+file+".css?v="+version);
+                        }
+                        text = await text.text();
+                        include.cache.css[file] = text;
+                    }else{
+                        text = include.cache.css[file];
+                    }
+
+                    let style = document.createElement("style");
                     style.setAttribute("rel","stylesheet");
                     style.setAttribute("type","text/css");
-                    if(file.charAt(0)==="@"){
-                        style.setAttribute("href",(file.replace("@","")));
-                    }else{
-                        style.setAttribute("href",dir+file+".css?v="+version);
-                    }
+                    style.innerHTML = text;
                     document.head.appendChild(style);
                     style.onload=function(){
                         (f)(style.getAttribute("href"));
@@ -790,27 +841,34 @@ const include={
         return new Promise(function(resolve,reject){
             let i = 0, length = list.length;
             if(list.constructor === Array && length>0){
-                (function poll(){
+                (async function poll(){
                     i++;
-    
                     let file = list[i-1]; //without extension
+                    
+                    let text;
+                    if(!include.cache.js[file]){
+                        if(file.charAt(0)==="@"){
+                            text = await fetch(file.replace(/@/g,""));
+                        }else{
+                            text = await fetch(dir+file+".js?v="+version);
+                        }
+                        text = await text.text();
+                        include.cache.js[file] = text;
+                    }else{
+                        text = include.cache.js[file];
+                    }
+
                     let script = document.createElement("script");
                     script.setAttribute("type","text/javascript");
                     script.setAttribute("charset","UTF-8");
-                    if(file.charAt(0)==="@"){
-                        script.setAttribute("src",(file.replace("@","")));
-                    }else{
-                        script.setAttribute("src",dir+file+".js?v="+version);
-                    }
+                    script.text = text;
                     document.head.appendChild(script);
-                    script.onload=function(){
-                        (f)(script.getAttribute("src"));
-                        if(i<length){
-                            poll();
-                        }else{
-                            (resolve)();
-                        }
-                    };
+                    (f)(script.getAttribute("src"));
+                    if(i<length){
+                        poll();
+                    }else{
+                        (resolve)();
+                    }
                 })();
             }
         });
@@ -818,18 +876,16 @@ const include={
 };
 
 include.component = include.components;
-const view=async function(componentName,stateUrl=null,toBeParentElement){
-    if(stateUrl!==null) history.pushState({}, '', stateUrl);
-    await use.component(componentName,toBeParentElement);
-    return toBeParentElement;
-};
+
 
 window.use = new Includer({
     "components":"/components",
     "js":"/js",
     "css":"/css"
 });
-window.components = {};
+const COMPONENTS = {};
+//window.component=use.component;
+
 
 Array.prototype.remove = function(deleteValue) {
     for (let i = 0; i < this.length; i++) {
@@ -865,8 +921,9 @@ Element.prototype.css=function(attributes={}){
     return css(this,attributes);
 };
 
-Element.prototype.view=async function(componentName,stateUrl=null){
-    return await view(componentName,stateUrl,this);
+Element.prototype.component=async function(componentName,data=null,stateUrl=null,version=0,apply=true){
+    await use.component(componentName,this,data,stateUrl,version,apply);
+    return this;
 };
 
 Element.prototype.clear=function(){
