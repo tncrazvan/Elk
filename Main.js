@@ -19,7 +19,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-const TAILWIND={};
+const CLASS={};
 const isset=function(object){
     if(object!==undefined){
         return true;
@@ -185,9 +185,10 @@ const parseElement=async function(item,allowVariables,extra={}){
             await (window[item.getAttribute("onload")])();
         }
     }
-    resolveTailwind(item);
+    componentResolver(item);
     resolveState(item);
 };
+
 
 //iterating through every child node of the provided target
 const recursiveParser=async function(target,allowVariables,extra={}){
@@ -225,23 +226,22 @@ const resolveState=function(element){
         history.pushState({}, '', element.getAttribute("state"));
     }
 };
-const resolveTailwind=function(element){
-    if(element.hasAttribute("tailwind")){
-        const key = element.getAttribute("tailwind");
-        if(TAILWIND[key]){
-            TAILWIND[key].forEach(cls=>{
-                const multiple = cls.split(/\s+/);
-                if(multiple.length>1){
-                    multiple.forEach(single=>{
-                        element.classList.add(single);
-                    });
-                }else{
-                    element.classList.add(cls);
-                }
-            });
+const Component={};
+const componentResolver=function(element){
+    const key = element.tagName;
+    for ( let c in Component ) {
+        if(c.toLowerCase() === key.toLowerCase()){
+            try{
+                let obj = (Component[c])(element);
+                break;
+            }catch(e){
+                console.error(e);
+                break;
+            }
         }
     }
 };
+
 const addClickEffect=async function(element,r=255,g=255,b=255){
     if(addClickEffect.first){
         addClickEffect.first = false;
@@ -665,11 +665,15 @@ const Includer=function(dir){
     this.component=function(value,bindElement,apply=true,version=0){
         return include.component(dir.components,value,bindElement,apply,version,function(mod){
             $this.currentComponentRequest = mod;
+            
         });
     };this.components = this.component;
 };
 
 const include={
+    cache:{
+        components:{}
+    },
     routes:async function(routes,pathname,eventualF=null){
         if(typeof routes === "string"){
             let o = {};
@@ -709,13 +713,19 @@ const include={
         if(length>0){
             for(let i = 0; i<length; i++){
                 let file = list[i];
-                let req
-                if(file.charAt(0)==="@"){
-                    req = await fetch(dir+file.substr(1)+"?v="+version);
+                let req,text
+                if(!include.cache.components[file]){
+                    if(file.charAt(0)==="@"){
+                        req = await fetch(dir+file.substr(1)+"?v="+version);
+                    }else{
+                        req = await fetch(dir+file+".html?v="+version);
+                    }
+                    text = await req.text();
+                    include.cache.components[file] = text;
                 }else{
-                    req = await fetch(dir+file+".html?v="+version);
+                    text = include.cache.components[file];
                 }
-                const text = await req.text();
+                
                 if(apply){
                     const componentName = file +"#"+(Object.keys(components).length+1);
                     const o = await create("component",text,{},true,{componentName:componentName,bindElement:bindElement},true);
@@ -806,6 +816,7 @@ const include={
         });
     }
 };
+
 include.component = include.components;
 const view=async function(componentName,stateUrl=null,toBeParentElement){
     if(stateUrl!==null) history.pushState({}, '', stateUrl);
@@ -837,6 +848,18 @@ String.prototype.splice = function(start, delCount, newSubStr) {
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
+
+Element.prototype.addClassNames=function(classnames){
+    classnames.forEach(classname=>{
+        this.classList.add(classname);
+    });
+};
+
+Element.prototype.removeClassNames=function(classnames){
+    classnames.forEach(classname=>{
+        this.classList.remove(classname);
+    });
+};
 
 Element.prototype.css=function(attributes={}){
     return css(this,attributes);
