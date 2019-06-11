@@ -243,13 +243,13 @@ const resolveComponent=function(element,extra){
     }
 };
 
-const addClickEffect=async function(element,r=255,g=255,b=255){
+const addClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
     if(addClickEffect.first){
         addClickEffect.first = false;
         document.head.appendChild(await create("style",
             "@keyframes clickeffect {"
                 +"from {"
-                    +"opacity: 0.7;"
+                    +"opacity: "+alpha+";"
                     +"transform: scale(0);"
                 +"}"
                 +"to {"
@@ -636,7 +636,7 @@ const Includer=function(dir){
         js: "",
         components: ""
     };
-
+    this.loadedScripts = {};
     this.getComponentsLocation=function(){
         return dir.components;
     };
@@ -673,9 +673,19 @@ const Includer=function(dir){
         }else{
             filename = value;
         }
-        const js = await this.js("@"+dir.components+"/"+value+"/"+filename+".js",version);
-        if(bindElement === null)
+        const scriptName = "@"+dir.components+"/"+value+"/"+filename+".js";
+        if(!this.loadedScripts[scriptName] || !this.loadedScripts[scriptName][version]){
+            const js = await this.js(scriptName,version);
+
+            if(!this.loadedScripts[scriptName]){
+                this.loadedScripts[scriptName] = {};
+            }
+            this.loadedScripts[scriptName][version] = true;
+
+            if(bindElement === null)
             return js;
+        }
+
         bindElement.data=data;
         const component = await include.component(dir.components,value+"/"+filename,bindElement,version,apply,function(file){
             $this.currentComponentRequest = file;
@@ -950,6 +960,10 @@ Element.prototype.insertChildAtIndex = function(child, index) {
     }
     return this;
 };
+
+Element.prototype.addClickEffect = function(red=255,green=255,blue=255,alpha=0.7){
+    addClickEffect(this,red,green,blue,alpha);
+}
 
 Number.prototype.truncate=function(places){
     if(!isset(Math.trunc)) return this;
