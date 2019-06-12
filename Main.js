@@ -279,10 +279,10 @@ const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
             height: element.offsetHeight
         });
         
-        canvas.style.transition = "background-color 100ms";
-        canvas.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
+        /*canvas.style.transition = "background-color 100ms";
+        canvas.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";*/
 
-        canvas.style.cursor="pointer";
+        //canvas.style.cursor="pointer";
         element.appendChild(canvas);
 
         canvas.style.position="absolute";
@@ -318,22 +318,46 @@ const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
             setTimeout(poll,1);
         })();
     };
-
+    const STATE_PLAY_BG = 0;
+    const STATE_STOP_BG = 1;
+    let bgAnimationSpeed = 3;
+    let bgAlphaMax = alpha/3;
+    let state = STATE_STOP_BG;
+    let bgOpacity = 0;
+    const bg = create("div");
+    bg.style.position = "absolute";
+    element.appendChild(bg);
     const playBackgroundEffect = function(){
-        const canvas = create("canvas","",{
-            width: element.offsetWidth,
-            height: element.offsetHeight
-        });
-        element.appendChild(canvas);
-        canvas.style.position="absolute";
-        canvas.style.pointerEvents="none";
+        state = STATE_PLAY_BG;
+        bg.style.width = Pixel(element.offsetWidth);
+        bg.style.height = Pixel(element.offsetHeight);
+        bg.style.left = Pixel(element.offsetLeft);
+        bg.style.top = Pixel(element.offsetTop);
+        (function poll(){
+            if(state === STATE_STOP_BG){
+                return;
+            }
+            if(bgOpacity > bgAlphaMax) bgOpacity = bgAlphaMax;
+            bg.style.backgroundColor = Rgba(r,g,b,bgOpacity);
+            bgOpacity += 0.0007 * bgAnimationSpeed;
+            setTimeout(poll,1);
+        })();
 
-        let rect = element.getBoundingClientRect();
-        canvas.style.left = Pixel(rect.x);
-        canvas.style.top = Pixel(rect.y);
-
-        canvas.style.transition = "background-color 500ms";
-        canvas.style.backgroundColor = "rgba("+r+","+g+","+b+",0.05)";
+    };
+    let stopBackgroundEffect = function(){
+        state = STATE_STOP_BG;
+        bg.style.width = Pixel(element.offsetWidth);
+        bg.style.height = Pixel(element.offsetHeight);
+        bg.style.background = Rgba(r,g,b,bgOpacity);
+        (function poll(){
+            if(state === STATE_PLAY_BG){
+                return;
+            }
+            if(bgOpacity < 0) bgOpacity = 0;
+            bg.style.backgroundColor = Rgba(r,g,b,bgOpacity);
+            bgOpacity -= 0.0007 * bgAnimationSpeed;
+            setTimeout(poll,1);
+        })();
     };
 
     if(isMobile.any()){
@@ -346,19 +370,18 @@ const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
             await playRippleEffect(e.changedTouches[0].clientX-pos.x,e.changedTouches[0].clientY-pos.y,element.offsetWidth);
         });
         element.addEventListener("touchcancel",function(e){
-            element.style.transition = "background-color 100ms";
-            element.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
+            stopBackgroundEffect();
         });
     }else{
         element.addEventListener("mousedown",function(e){
             playBackgroundEffect();
         });
         element.addEventListener("mouseup",async function(e){
+            stopBackgroundEffect();
             await playRippleEffect(e.offsetX,e.offsetY,element.offsetWidth);
         });
         element.addEventListener("mouseout",function(e){
-            element.style.transition = "background-color 100ms";
-            element.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
+            stopBackgroundEffect();
         });
     }
 };
