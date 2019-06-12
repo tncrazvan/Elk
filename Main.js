@@ -218,7 +218,8 @@ const recursiveParser=async function(target,allowVariables,extra={}){
                     const red = options[0]?options[0]:255;
                     const green = options[1]?options[1]:255;
                     const blue = options[2]?options[2]:255;
-                    await addClickEffect(child,red,green,blue);
+                    const alpha = options[3]?options[3]:0.7;
+                    await setClickEffect(child,red,green,blue,alpha);
                 }
                 await parseElement(child,allowVariables,extra);
             break;
@@ -243,9 +244,9 @@ const resolveComponent=function(element,extra){
     }
 };
 
-const addClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
-    if(addClickEffect.first){
-        addClickEffect.first = false;
+const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
+    if(setClickEffect.first){
+        setClickEffect.first = false;
         document.head.appendChild(await create("style",
             "@keyframes clickeffect {"
                 +"from {"
@@ -273,12 +274,14 @@ const addClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
     }
 
     const playRippleEffect = async function(x,y,maxRadius){
-        element.style.transition = "background-color 100ms";
-        element.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
         const canvas = await create("canvas","",{
             width: element.offsetWidth,
             height: element.offsetHeight
         });
+        
+        canvas.style.transition = "background-color 100ms";
+        canvas.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";
+
         canvas.style.cursor="pointer";
         element.appendChild(canvas);
 
@@ -317,8 +320,20 @@ const addClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
     };
 
     const playBackgroundEffect = function(){
-        element.style.transition = "background-color 500ms";
-        element.style.backgroundColor = "rgba("+r+","+g+","+b+",0.05)";
+        const canvas = create("canvas","",{
+            width: element.offsetWidth,
+            height: element.offsetHeight
+        });
+        element.appendChild(canvas);
+        canvas.style.position="absolute";
+        canvas.style.pointerEvents="none";
+
+        let rect = element.getBoundingClientRect();
+        canvas.style.left = Pixel(rect.x);
+        canvas.style.top = Pixel(rect.y);
+
+        canvas.style.transition = "background-color 500ms";
+        canvas.style.backgroundColor = "rgba("+r+","+g+","+b+",0.05)";
     };
 
     if(isMobile.any()){
@@ -347,7 +362,7 @@ const addClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
         });
     }
 };
-addClickEffect.first = true;
+setClickEffect.first = true;
 
 const isMobile = {
     Android: function() {
@@ -961,8 +976,8 @@ Element.prototype.insertChildAtIndex = function(child, index) {
     return this;
 };
 
-Element.prototype.addClickEffect = function(red=255,green=255,blue=255,alpha=0.7){
-    addClickEffect(this,red,green,blue,alpha);
+Element.prototype.setClickEffect = function(red=255,green=255,blue=255,alpha=0.7){
+    setClickEffect(this,red,green,blue,alpha);
 }
 
 Number.prototype.truncate=function(places){
