@@ -326,8 +326,8 @@ const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
     let bgOpacity = 0;
     const bg = create("div");
     bg.style.position = "absolute";
-    element.appendChild(bg);
     const playBackgroundEffect = function(){
+        element.appendChild(bg);
         state = STATE_PLAY_BG;
         bg.style.width = Pixel(element.offsetWidth);
         bg.style.height = Pixel(element.offsetHeight);
@@ -356,6 +356,10 @@ const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
             if(bgOpacity < 0) bgOpacity = 0;
             bg.style.backgroundColor = Rgba(r,g,b,bgOpacity);
             bgOpacity -= 0.0007 * bgAnimationSpeed;
+            if(bgOpacity === 0){
+                element.removeChild(bg);
+                return;
+            }
             setTimeout(poll,1);
         })();
     };
