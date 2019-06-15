@@ -260,10 +260,8 @@ const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
         canvas.style.position="absolute";
         canvas.style.pointerEvents="none";
         canvas.style.background="none";
-
-        let rect = element.getBoundingClientRect();
-        canvas.style.left = Pixel(rect.x);
-        canvas.style.top = Pixel(rect.y);
+        canvas.style.left = Pixel(0);
+        canvas.style.top = Pixel(0);
         
         canvas.style.margin= "0";
         const ctx = canvas.getContext("2d");
@@ -284,9 +282,8 @@ const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
                 }
                 return;
             };
-            rect = element.getBoundingClientRect();
-            canvas.style.left = Pixel(rect.x);
-            canvas.style.top = Pixel(rect.y);
+            canvas.style.left = Pixel(0);
+            canvas.style.top = Pixel(0);
             setTimeout(poll,1);
         })();
     };
