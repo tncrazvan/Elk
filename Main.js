@@ -134,16 +134,16 @@ const parseElement=async function(item,allowVariables,extra={}){
     }
     if(item.hasAttribute("import")){
         const importName = item.getAttribute("import").split("=>");
-        const componentName = importName[0].trim();
+        const viewName = importName[0].trim();
         if(importName.length === 1 || importName[1].trim() === "*"){
-            const req = await use.component(componentName,null,false);
-            item.applyHtml(req,allowVariables,{componentName:componentName});
+            const req = await use.view(viewName,null,false);
+            item.applyHtml(req,allowVariables,{viewName:viewName});
         }else{
             const selectors = importName[1].trim().split(",");
             for(let i=0;i<selectors.length;i++){
                 const selector = selectors[1];
-                const req = await use.component(componentName);
-                const selected = req[componentName].querySelector(selector);
+                const req = await use.view(viewName);
+                const selected = req[viewName].querySelector(selector);
                 if(selected === null) continue;
                 if(selected.tagName === "SCRIPT"){
                     if(selected.hasAttribute("src")){
@@ -172,7 +172,7 @@ const parseElement=async function(item,allowVariables,extra={}){
                 window[exportTarget].innerHTML="";
             }
             window[exportTarget].appendChild(item);
-            if(extra.componentName && item.hasAttribute("use")){
+            if(extra.viewName && item.hasAttribute("use")){
                 await use.js(item.getAttribute("use"));
             }
         }else if(extra.bindElement){
@@ -180,7 +180,7 @@ const parseElement=async function(item,allowVariables,extra={}){
                 extra.bindElement.innerHTML="";
             }
             extra.bindElement.appendChild(item);
-            if(extra.componentName && item.hasAttribute("use")){
+            if(extra.viewName && item.hasAttribute("use")){
                 await use.js(item.getAttribute("use"));
             }
         }
@@ -230,6 +230,7 @@ const recursiveParser=async function(target,allowVariables,extra={}){
 const Component={};
 const resolveComponent=function(element,extra){
     const key = element.tagName;
+    
     for ( let c in Component ) {
         if(c.toLowerCase() === key.toLowerCase()){
             try{
@@ -585,11 +586,11 @@ const Includer=function(dir){
     if(!dir) dir = {
         css: "",
         js: "",
-        components: ""
+        views: ""
     };
     this.loadedScripts = {};
-    this.getComponentsLocation=function(){
-        return dir.components;
+    this.getViewsLocation=function(){
+        return dir.views;
     };
     this.getJSLocation=function(){
         return dir.js;
@@ -598,7 +599,7 @@ const Includer=function(dir){
         return dir.css;
     };
     let $this = this;
-    this.currentComponentRequest = null;
+    this.currentViewRequest = null;
     this.currentCSSRequest = null;
     this.currentJavaScriptRequest = null;
     this.routes=async function(routes,pathname,eventualF=null){
@@ -614,7 +615,7 @@ const Includer=function(dir){
             $this.currentCSSRequest = file;
         });
     };
-    this.component=async function(value,bindElement=null,data=null,stateUrl=null,version=0,apply=true){
+    this.view=async function(value,bindElement=null,data=null,stateUrl=null,version=0,apply=true){
         if(stateUrl !== null) {
             state(stateUrl);
         }
@@ -624,7 +625,7 @@ const Includer=function(dir){
         }else{
             filename = value;
         }
-        const scriptName = "@"+dir.components+"/"+value+"/"+filename+".js";
+        /*const scriptName = "@"+dir.views+"/"+value+"/"+filename+".js";
         if(!this.loadedScripts[scriptName] || !this.loadedScripts[scriptName][version]){
             const js = await this.js(scriptName,version);
 
@@ -635,14 +636,14 @@ const Includer=function(dir){
 
             if(bindElement === null)
             return js;
-        }
+        }*/
 
         bindElement.data=data;
-        const component = await include.component(dir.components,value+"/"+filename,bindElement,version,apply,function(file){
-            $this.currentComponentRequest = file;
+        const view = await include.view(dir.views,value+"/"+filename,bindElement,version,apply,function(file){
+            $this.currentViewRequest = file;
         });
-        return component;
-    };this.components = this.component;
+        return view;
+    };this.views = this.view;
 };
 
 window.onpopstate=e=>{
@@ -679,7 +680,7 @@ const include={
         }
     },
     cache:{
-        components:{},
+        views:{},
         js:{},
         css:{},
         routes:{}
@@ -701,11 +702,11 @@ const include={
             }
         }
     },
-    components:async function(dir,list,bindElement,version=0,apply=true,f){
+    views:async function(dir,list,bindElement,version=0,apply=true,f){
         if(typeof list =="string")
         list = [list];
 
-        if(dir === "") dir = "/components/";
+        if(dir === "") dir = "/views/";
         if(dir[dir.length-1] !== "/"){
             dir +="/";
         }
@@ -716,24 +717,24 @@ const include={
             for(let i = 0; i<length; i++){
                 let file = list[i];
                 let req,text
-                if(!include.cache.components[file]){
+                if(!include.cache.views[file]){
                     if(file.charAt(0)==="@"){
                         req = await fetch(dir+file.substr(1)+"?v="+version);
                     }else{
                         req = await fetch(dir+file+".html?v="+version);
                     }
                     text = await req.text();
-                    include.cache.components[file] = text;
+                    include.cache.views[file] = text;
                 }else{
-                    text = include.cache.components[file];
+                    text = include.cache.views[file];
                 }
                 
                 if(apply){
-                    const componentName = file +"#"+(Object.keys(COMPONENTS).length+1);
-                    const o = await create("component",text,{},true,{componentName:componentName,bindElement:bindElement},true);
-                    /*components[componentName] = o;
-                    currentList[componentName] = o;*/
-                    (f)(componentName,o);
+                    const viewName = file +"#"+(Object.keys(VIEWS).length+1);
+                    const o = await create("view",text,{},true,{viewName:viewName,bindElement:bindElement},true);
+                    /*views[viewName] = o;
+                    currentList[viewName] = o;*/
+                    (f)(viewName,o);
                 }else{
                     return text;
                 }
@@ -836,16 +837,16 @@ const include={
     }
 };
 
-include.component = include.components;
+include.view = include.views;
 
 
 window.use = new Includer({
-    "components":"/components",
+    "views":"/views",
     "js":"/js",
     "css":"/css"
 });
-const COMPONENTS = {};
-//window.component=use.component;
+const VIEWS = {};
+//window.view=use.view;
 
 
 Array.prototype.remove = function(deleteValue) {
@@ -882,8 +883,8 @@ Element.prototype.css=function(attributes={}){
     return css(this,attributes);
 };
 
-Element.prototype.component=async function(componentName,data=null,stateUrl=null,version=0,apply=true){
-    await use.component(componentName,this,data,stateUrl,version,apply);
+Element.prototype.view=async function(viewName,data=null,stateUrl=null,version=0,apply=true){
+    await use.view(viewName,this,data,stateUrl,version,apply);
     return this;
 };
 
