@@ -134,16 +134,16 @@ const parseElement=async function(item,allowVariables,extra={}){
     }
     if(item.hasAttribute("import")){
         const importName = item.getAttribute("import").split("=>");
-        const viewName = importName[0].trim();
+        const moduleName = importName[0].trim();
         if(importName.length === 1 || importName[1].trim() === "*"){
-            const req = await use.view(viewName,null,false);
-            item.applyHtml(req,allowVariables,{viewName:viewName});
+            const req = await use.module(moduleName,null,false);
+            item.applyHtml(req,allowVariables,{moduleName:moduleName});
         }else{
             const selectors = importName[1].trim().split(",");
             for(let i=0;i<selectors.length;i++){
                 const selector = selectors[1];
-                const req = await use.view(viewName);
-                const selected = req[viewName].querySelector(selector);
+                const req = await use.module(moduleName);
+                const selected = req[moduleName].querySelector(selector);
                 if(selected === null) continue;
                 if(selected.tagName === "SCRIPT"){
                     if(selected.hasAttribute("src")){
@@ -172,7 +172,7 @@ const parseElement=async function(item,allowVariables,extra={}){
                 window[exportTarget].innerHTML="";
             }
             window[exportTarget].appendChild(item);
-            if(extra.viewName && item.hasAttribute("use")){
+            if(extra.moduleName && item.hasAttribute("use")){
                 await use.js(item.getAttribute("use"));
             }
         }else if(extra.bindElement){
@@ -180,7 +180,7 @@ const parseElement=async function(item,allowVariables,extra={}){
                 extra.bindElement.innerHTML="";
             }
             extra.bindElement.appendChild(item);
-            if(extra.viewName && item.hasAttribute("use")){
+            if(extra.moduleName && item.hasAttribute("use")){
                 await use.js(item.getAttribute("use"));
             }
         }
@@ -586,11 +586,11 @@ const Includer=function(dir){
     if(!dir) dir = {
         css: "",
         js: "",
-        views: ""
+        modules: ""
     };
     this.loadedScripts = {};
-    this.getViewsLocation=function(){
-        return dir.views;
+    this.getModulesLocation=function(){
+        return dir.modules;
     };
     this.getJSLocation=function(){
         return dir.js;
@@ -599,7 +599,7 @@ const Includer=function(dir){
         return dir.css;
     };
     let $this = this;
-    this.currentViewRequest = null;
+    this.currentModuleRequest = null;
     this.currentCSSRequest = null;
     this.currentJavaScriptRequest = null;
     this.routes=async function(routes,pathname,eventualF=null){
@@ -615,7 +615,7 @@ const Includer=function(dir){
             $this.currentCSSRequest = file;
         });
     };
-    this.view=async function(value,bindElement=null,data=null,stateUrl=null,version=0,apply=true){
+    this.module=async function(value,bindElement=null,data=null,stateUrl=null,version=0,apply=true){
         if(stateUrl !== null) {
             state(stateUrl);
         }
@@ -625,7 +625,7 @@ const Includer=function(dir){
         }else{
             filename = value;
         }
-        /*const scriptName = "@"+dir.views+"/"+value+"/"+filename+".js";
+        /*const scriptName = "@"+dir.modules+"/"+value+"/"+filename+".js";
         if(!this.loadedScripts[scriptName] || !this.loadedScripts[scriptName][version]){
             const js = await this.js(scriptName,version);
 
@@ -639,11 +639,11 @@ const Includer=function(dir){
         }*/
 
         bindElement.data=data;
-        const view = await include.view(dir.views,value+"/"+filename,bindElement,version,apply,function(file){
-            $this.currentViewRequest = file;
+        const module = await include.module(dir.modules,value+"/"+filename,bindElement,version,apply,function(file){
+            $this.currentModuleRequest = file;
         });
-        return view;
-    };this.views = this.view;
+        return module;
+    };this.modules = this.module;
 };
 
 window.onpopstate=e=>{
@@ -680,7 +680,7 @@ const include={
         }
     },
     cache:{
-        views:{},
+        modules:{},
         js:{},
         css:{},
         routes:{}
@@ -702,11 +702,11 @@ const include={
             }
         }
     },
-    views:async function(dir,list,bindElement,version=0,apply=true,f){
+    modules:async function(dir,list,bindElement,version=0,apply=true,f){
         if(typeof list =="string")
         list = [list];
 
-        if(dir === "") dir = "/views/";
+        if(dir === "") dir = "/modules/";
         if(dir[dir.length-1] !== "/"){
             dir +="/";
         }
@@ -717,24 +717,24 @@ const include={
             for(let i = 0; i<length; i++){
                 let file = list[i];
                 let req,text
-                if(!include.cache.views[file]){
+                if(!include.cache.modules[file]){
                     if(file.charAt(0)==="@"){
                         req = await fetch(dir+file.substr(1)+"?v="+version);
                     }else{
                         req = await fetch(dir+file+".html?v="+version);
                     }
                     text = await req.text();
-                    include.cache.views[file] = text;
+                    include.cache.modules[file] = text;
                 }else{
-                    text = include.cache.views[file];
+                    text = include.cache.modules[file];
                 }
                 
                 if(apply){
-                    const viewName = file +"#"+(Object.keys(VIEWS).length+1);
-                    const o = await create("view",text,{},true,{viewName:viewName,bindElement:bindElement},true);
-                    /*views[viewName] = o;
-                    currentList[viewName] = o;*/
-                    (f)(viewName,o);
+                    const moduleName = file +"#"+(Object.keys(MODULES).length+1);
+                    const o = await create("module",text,{},true,{moduleName:moduleName,bindElement:bindElement},true);
+                    /*modules[moduleName] = o;
+                    currentList[moduleName] = o;*/
+                    (f)(moduleName,o);
                 }else{
                     return text;
                 }
@@ -837,16 +837,16 @@ const include={
     }
 };
 
-include.view = include.views;
+include.module = include.modules;
 
 
 window.use = new Includer({
-    "views":"/views",
+    "modules":"/modules",
     "js":"/js",
     "css":"/css"
 });
-const VIEWS = {};
-//window.view=use.view;
+const MODULES = {};
+//window.module=use.module;
 
 
 Array.prototype.remove = function(deleteValue) {
@@ -883,8 +883,8 @@ Element.prototype.css=function(attributes={}){
     return css(this,attributes);
 };
 
-Element.prototype.view=async function(viewName,data=null,stateUrl=null,version=0,apply=true){
-    await use.view(viewName,this,data,stateUrl,version,apply);
+Element.prototype.module=async function(moduleName,data=null,stateUrl=null,version=0,apply=true){
+    await use.module(moduleName,this,data,stateUrl,version,apply);
     return this;
 };
 
