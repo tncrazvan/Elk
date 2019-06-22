@@ -172,16 +172,16 @@ const parseElement=async function(item,allowVariables,extra={}){
                 window[exportTarget].innerHTML="";
             }
             window[exportTarget].appendChild(item);
-            if(extra.moduleName && item.hasAttribute("use")){
-                await use.js(item.getAttribute("use"));
+            if(extra.moduleName && item.hasAttribute("js")){
+                await use.js(item.getAttribute("js"));
             }
         }else if(extra.bindElement){
             if(item.hasAttribute("replace")){
                 extra.bindElement.innerHTML="";
             }
             extra.bindElement.appendChild(item);
-            if(extra.moduleName && item.hasAttribute("use")){
-                await use.js(item.getAttribute("use"));
+            if(extra.moduleName && item.hasAttribute("js")){
+                await use.js(item.getAttribute("js"));
             }
         }
         if(item.onload){
@@ -619,27 +619,9 @@ const Includer=function(dir){
         if(stateUrl !== null) {
             state(stateUrl);
         }
-        let filename = value.split(/\//);
-        if(filename.length > 0){
-            filename = filename[filename.length-1];
-        }else{
-            filename = value;
-        }
-        /*const scriptName = "@"+dir.modules+"/"+value+"/"+filename+".js";
-        if(!this.loadedScripts[scriptName] || !this.loadedScripts[scriptName][version]){
-            const js = await this.js(scriptName,version);
-
-            if(!this.loadedScripts[scriptName]){
-                this.loadedScripts[scriptName] = {};
-            }
-            this.loadedScripts[scriptName][version] = true;
-
-            if(bindElement === null)
-            return js;
-        }*/
 
         bindElement.data=data;
-        const module = await include.module(dir.modules,value+"/"+filename,bindElement,version,apply,function(file){
+        const module = await include.module(dir.modules,value,bindElement,version,apply,function(file){
             $this.currentModuleRequest = file;
         });
         return module;
@@ -763,20 +745,22 @@ const include={
                     let text;
                     if(!include.cache.css[file]){
                         if(file.charAt(0)==="@"){
-                            text = await fetch(file.replace(/@/g,""));
+                            file = file.replace(/@/g,"");
+                            //text = await fetch(file.replace(/@/g,""));
                         }else{
-                            text = await fetch(dir+file+".css?v="+version);
+                            file = dir+file+".css?v="+version;
+                            //text = await fetch(dir+file+".css?v="+version);
                         }
-                        text = await text.text();
-                        include.cache.css[file] = text;
+                        //text = await text.text();
+                        //include.cache.css[file] = text;
                     }else{
-                        text = include.cache.css[file];
+                        //text = include.cache.css[file];
                     }
 
-                    let style = document.createElement("style");
+                    let style = document.createElement("link");
                     style.setAttribute("rel","stylesheet");
                     style.setAttribute("type","text/css");
-                    style.innerHTML = text;
+                    style.setAttribute("href",file);
                     document.head.appendChild(style);
                     style.onload=function(){
                         (f)(style.getAttribute("href"));
