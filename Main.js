@@ -124,6 +124,36 @@ const css = function(element,attributes={}){
     }
     return element;
 };
+const sortBy = function(key,reverse){
+    // Move smaller items towards the front
+    // or back of the array depending on if
+    // we want to sort the array in reverse
+    // order or not.
+    const moveSmaller = reverse ? 1 : -1;
+  
+    // Move larger items towards the front
+    // or back of the array depending on if
+    // we want to sort the array in reverse
+    // order or not.
+    const moveLarger = reverse ? -1 : 1;
+  
+    /**
+     * @param  {*} a
+     * @param  {*} b
+     * @return {Number}
+     */
+    return (a, b) => {
+        if(a === null || b === null) return 0;
+        if (a[key] < b[key]) {
+            return moveSmaller;
+        }
+        if (a[key] > b[key]) {
+            return moveLarger;
+        }
+        return 0;
+    };
+}
+
 const insertAfter=function(newNode, referenceNode) {
     referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
 };
@@ -190,21 +220,45 @@ const parseElement=async function(item,allowVariables,extra={}){
             await (window[item.getAttribute("onload")])();
         }
     }
-    new ConditionResolver(item);
-    new ComponentResolver(item,extra);
-    new VariableResolver(item);
+    new GeneralResolver(item,extra);
 };
 
-const VariableResolver=function(item){
-    const REGEX = /(?=@).*[A-z0-9]+/;
-    if(item.children.length > 0) return;
-        let matches = [...new Set(item.innerText.match(REGEX))];
-        matches.forEach(match=>{
-            let key = match.substr(1);
-            if(item.data && item.data[key]){
-                item.innerText = item.innerText.replace(new RegExp(match),item.data[key]);
+const GeneralResolver=function(item,extra,foreach=true,variablePath=[]){
+    new ConditionResolver(item,extra);
+    new VariableResolver(item,variablePath);
+    new ComponentResolver(item,extra);
+    if(foreach !== false) new ForeachResolver(item,extra,foreach);
+};
+
+const ForeachResolver=function(item,extra){
+    if(item.hasAttribute("@foreach")){
+        let targetName = item.getAttribute("@foreach");
+        let last = item;
+        let tmp = item.data[targetName];
+        if(item.hasAttribute("@sortBy")){
+            let sort = item.getAttribute("@foreach");
+            tmp = item.data[targetName];
+            tmp.sort(sortBy(sort));
+        }
+
+        for (var key in tmp) {
+            if (!tmp.hasOwnProperty(key)) continue;
+            let value = tmp[key];
+            let clone = item.cloneNode();
+            clone.innerHTML=item.innerHTML;
+            if(!clone.data){
+                clone.data={};
             }
-    });
+            clone.data["@foreach"]={
+                value:value,
+                key:key
+            }
+            new GeneralResolver(clone,extra,false,["@foreach"]);
+            insertAfter(clone, item);
+        }
+
+        item.parentNode.removeChild(item);
+    }
 };
 
 const ConditionResolver=function(item){
@@ -296,6 +350,28 @@ const ComponentResolver=function(item,extra){
             }
         }
     }
+};
+
+const VariableResolver=function(item,path=[]){
+    const REGEX = /@[A-z0-9]*/g;
+    if(item.children.length > 0) return;
+        let matches = [...new Set(item.innerText.matchAll(REGEX))];
+        matches.forEach(match=>{
+            let key = match[0].substr(1);
+            let data = item.data;
+            if(data){
+                path.forEach(function(location){
+                    if(data[location]){
+                        data = item.data[location];
+                    }else{
+                        console.warn("Variable \""+(path.join("->"))+"->"+key+"\" doesn't exist in the data object.",item);
+                        return;
+                    }
+                });
+                if(key in data)
+                item.innerHTML = item.innerHTML.replace(new RegExp(match),data[key]);
+            }
+    });
 };
 
 //iterating through every child node of the provided target
