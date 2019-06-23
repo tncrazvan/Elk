@@ -296,6 +296,7 @@ const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
         });
     }else{
         element.addEventListener("mouseup",async function(e){
+            console.log("world");
             await playRippleEffect(e.offsetX,e.offsetY,element.offsetWidth);
         });
     }
@@ -745,22 +746,20 @@ const include={
                     let text;
                     if(!include.cache.css[file]){
                         if(file.charAt(0)==="@"){
-                            file = file.replace(/@/g,"");
-                            //text = await fetch(file.replace(/@/g,""));
+                            text = await fetch(file.replace(/@/g,""));
                         }else{
-                            file = dir+file+".css?v="+version;
-                            //text = await fetch(dir+file+".css?v="+version);
+                            text = await fetch(dir+file+".css?v="+version);
                         }
-                        //text = await text.text();
-                        //include.cache.css[file] = text;
+                        text = await text.text();
+                        include.cache.css[file] = text;
                     }else{
-                        //text = include.cache.css[file];
+                        text = include.cache.css[file];
                     }
 
-                    let style = document.createElement("link");
+                    let style = document.createElement("style");
                     style.setAttribute("rel","stylesheet");
                     style.setAttribute("type","text/css");
-                    style.setAttribute("href",file);
+                    style.innerHTML = text;
                     document.head.appendChild(style);
                     style.onload=function(){
                         (f)(style.getAttribute("href"));
