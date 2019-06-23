@@ -190,9 +190,113 @@ const parseElement=async function(item,allowVariables,extra={}){
             await (window[item.getAttribute("onload")])();
         }
     }
-    resolveComponent(item,extra);
+    new ConditionResolver(item);
+    new ComponentResolver(item,extra);
+    new VariableResolver(item);
 };
 
+const VariableResolver=function(item){
+    const REGEX = /(?=@).*[A-z0-9]+/;
+    if(item.children.length > 0) return;
+        let matches = [...new Set(item.innerText.match(REGEX))];
+        matches.forEach(match=>{
+            let key = match.substr(1);
+            if(item.data && item.data[key]){
+                item.innerText = item.innerText.replace(new RegExp(match),item.data[key]);
+            }
+    });
+};
+
+const ConditionResolver=function(item){
+    const IF = 0, ELSE = 1, ELSEIF = 2;
+    this.result=false;
+    const ID = ConditionResolver.stack.length;
+    const PREV = ID-1 < 0? null: ID-1;
+
+    if(item.hasAttribute("@if")){
+        let result = "";
+        let statement = item.getAttribute("@if");
+        if(statement.trim() !== ""){
+            try{
+                result = eval(statement);
+                if(result){}else{
+                    item.parentNode.removeChild(item);
+                }
+                this.result=result;
+                ConditionResolver.stack[ID] = this;
+                this.type = IF;
+            }catch(e){
+                console.error("@if statement could not be parsed "+item);
+            }
+        }else{
+            console.warn("@if statement does not contain a condition in ",item);
+            item.parentNode.removeChild(item);
+        }
+        
+
+    }else if(item.hasAttribute("@elseif") ){
+        if(PREV !== null && ConditionResolver.stack[PREV].type === IF){
+            if(ConditionResolver.stack[PREV].result){
+                item.parentNode.removeChild(item);
+            }else{
+                let result = "";
+                let statement = item.getAttribute("@elseif");
+                if(statement.trim() !== ""){
+                    try{
+                        result = eval(statement);
+                        if(result){}else{
+                            item.parentNode.removeChild(item);
+                        }
+                        this.result=result;
+                    }catch(e){
+                        console.error("@elseif statement could not be parsed ",item);
+                    }
+                }else{
+                    item.parentNode.removeChild(item);
+                }
+                
+            }
+        }else{
+            console.warn("@elseif statement does not contain a condition in ",item);
+            item.parentNode.removeChild(item);
+        }
+        ConditionResolver.stack[ID] = this;
+        this.type = ELSEIF;
+    }else if(item.hasAttribute("@else")){
+        if(PREV !== null && (
+            ConditionResolver.stack[PREV].type === IF ||
+            ConditionResolver.stack[PREV].type === ELSEIF
+            )){
+                if(ConditionResolver.stack[PREV].result){
+                    item.parentNode.removeChild(item);   
+                }
+            }else{
+            item.parentNode.removeChild(item);
+        }
+        ConditionResolver.stack[ID] = this;
+        this.type = ELSE;
+    }
+};
+ConditionResolver.stack = new Array();
+
+const Component={};
+const ComponentResolver=function(item,extra){
+    const key = item.tagName;
+        
+    for ( let c in Component ) {
+        if(c.toLowerCase() === key.toLowerCase()){
+            try{
+                item.data = extra.bindElement.data;
+                let tmp = Component[c];
+                (tmp).call(item,item);
+                break;
+            }catch(e){
+                console.error(e);
+                break;
+            }
+        }
+    }
+};
 
 //iterating through every child node of the provided target
 const recursiveParser=async function(target,allowVariables,extra={}){
@@ -225,24 +329,6 @@ const recursiveParser=async function(target,allowVariables,extra={}){
             break;
         }
     });
-};
-
-const Component={};
-const resolveComponent=function(element,extra){
-    const key = element.tagName;
-    
-    for ( let c in Component ) {
-        if(c.toLowerCase() === key.toLowerCase()){
-            try{
-                element.data = extra.bindElement.data;
-                let obj = (Component[c])(element);
-                break;
-            }catch(e){
-                console.error(e);
-                break;
-            }
-        }
-    }
 };
 
 const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
@@ -296,7 +382,6 @@ const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
         });
     }else{
         element.addEventListener("mouseup",async function(e){
-            console.log("world");
             await playRippleEffect(e.offsetX,e.offsetY,element.offsetWidth);
         });
     }
@@ -849,7 +934,10 @@ String.prototype.splice = function(start, delCount, newSubStr) {
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
-
+Element.prototype.extends=function(componentName){
+    let extendTmp = Component[componentName];
+    (extendTmp).call(this,this);
+};
 Element.prototype.addClassNames=function(classnames){
     classnames.forEach(classname=>{
         this.classList.add(classname);
