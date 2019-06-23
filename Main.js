@@ -872,8 +872,7 @@ const include={
             let i = 0, length = list.length;
             if(list.constructor === Array && length>0){
                 (async function poll(){
-                    i++;
-                    let file = list[i-1]; //without extension
+                    let file = list[i]; //without extension
                     
                     let text;
                     if(!include.cache.js[file]){
@@ -895,6 +894,7 @@ const include={
                     document.head.appendChild(script);
                     (f)(script.getAttribute("src"));
                     if(i<length){
+                        i++;
                         poll();
                     }else{
                         (resolve)();
