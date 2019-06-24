@@ -220,14 +220,11 @@ const parseElement=async function(item,allowVariables,extra={}){
             await (window[item.getAttribute("onload")])();
         }
     }
-    new GeneralResolver(item,extra);
-};
-
-const GeneralResolver=function(item,extra,foreach=true,variablePath=[]){
     new ConditionResolver(item,extra);
-    new VariableResolver(item,variablePath);
     new ComponentResolver(item,extra);
-    if(foreach !== false) new ForeachResolver(item,extra,foreach);
+    let hasForeach = item.hasAttribute("@foreach");
+    if(!hasForeach) new VariableResolver(item,[]);
+    if(hasForeach) new ForeachResolver(item,extra);
 };
 
 const ForeachResolver=function(item,extra){
@@ -253,7 +250,9 @@ const ForeachResolver=function(item,extra){
                 value:value,
                 key:key
             }
-            new GeneralResolver(clone,extra,false,["@foreach"]);
+            new ConditionResolver(item,extra);
+            new ComponentResolver(item,extra);
+            new VariableResolver(clone,["@foreach"]);
             insertAfter(clone, last);
             last = clone;
         }
