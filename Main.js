@@ -235,8 +235,8 @@ const ForeachResolver=function(item,extra){
         let targetName = item.getAttribute("@foreach");
         let last = item;
         let tmp = item.data[targetName];
-        if(item.hasAttribute("@sortBy")){
-            let sort = item.getAttribute("@foreach");
+        if(item.hasAttribute("@sortby")){
+            let sort = item.getAttribute("@sortby");
             tmp = item.data[targetName];
             tmp.sort(sortBy(sort));
         }
@@ -355,8 +355,13 @@ const ComponentResolver=function(item,extra){
 
 const VariableResolver=function(item,path=[]){
     const REGEX = /@[A-z0-9\.]*/g;
-    if(item.children.length > 0) return;
-        let matches = [...new Set(item.innerText.matchAll(REGEX))];
+    const SUCCESS = 0, NO_DATA = 1, NO_MATCH = 2;
+    let resolve = function(input,callback){
+        let matches = [...new Set(input.matchAll(REGEX))];
+        if(matches.length === 0){
+            (callback)(undefined,NO_MATCH);
+            return;
+        }
         matches.forEach(match=>{
             let key = match[0].substr(1);
             let data = item.data;
@@ -370,9 +375,29 @@ const VariableResolver=function(item,path=[]){
                     }
                 });
                 let result = new Function("return this."+key+";").call(data);
-                console.log(item,result);
-                item.innerHTML = item.innerHTML.replace(new RegExp(match),result);
+                (callback)(input.replace(new RegExp(match),result),SUCCESS);
+            }else{
+                (callback)(undefined,NO_DATA);
             }
+        });
+    };
+
+    if(item.children.length === 0){
+        resolve(item.innerHTML,function(result,state){
+            if(state === SUCCESS){
+                item.innerHTML = result;
+            }
+        });
+    };
+    
+
+    let attributes = [...item.attributes];
+    attributes.forEach(attribute=>{
+        resolve(attribute.value,function(result,state){
+            if(state === SUCCESS){
+                item.setAttribute(attribute.name,result)
+            }
+        });
     });
 };
 
