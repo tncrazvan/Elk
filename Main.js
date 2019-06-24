@@ -254,7 +254,8 @@ const ForeachResolver=function(item,extra){
                 key:key
             }
             new GeneralResolver(clone,extra,false,["@foreach"]);
-            insertAfter(clone, item);
+            insertAfter(clone, last);
+            last = clone;
         }
 
         item.parentNode.removeChild(item);
@@ -353,7 +354,7 @@ const ComponentResolver=function(item,extra){
 };
 
 const VariableResolver=function(item,path=[]){
-    const REGEX = /@[A-z0-9]*/g;
+    const REGEX = /@[A-z0-9\.]*/g;
     if(item.children.length > 0) return;
         let matches = [...new Set(item.innerText.matchAll(REGEX))];
         matches.forEach(match=>{
@@ -368,8 +369,9 @@ const VariableResolver=function(item,path=[]){
                         return;
                     }
                 });
-                if(key in data)
-                item.innerHTML = item.innerHTML.replace(new RegExp(match),data[key]);
+                let result = new Function("return this."+key+";").call(data);
+                console.log(item,result);
+                item.innerHTML = item.innerHTML.replace(new RegExp(match),result);
             }
     });
 };
