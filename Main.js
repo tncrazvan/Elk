@@ -222,9 +222,11 @@ const parseElement=async function(item,allowVariables,extra={}){
     }
     new ConditionResolver(item,extra);
     new ComponentResolver(item,extra);
-    let hasForeach = item.hasAttribute("@foreach");
-    if(!hasForeach) new VariableResolver(item,[]);
-    if(hasForeach) new ForeachResolver(item,extra);
+    if(!item.hasAttribute("@foreach")){
+        new VariableResolver(item,[]);
+    }else{
+        new ForeachResolver(item,extra);
+    }
 };
 
 const ForeachResolver=function(item,extra){
@@ -250,8 +252,8 @@ const ForeachResolver=function(item,extra){
                 value:value,
                 key:key
             }
-            new ConditionResolver(item,extra);
-            new ComponentResolver(item,extra);
+            new ConditionResolver(clone,extra);
+            new ComponentResolver(clone,extra);
             new VariableResolver(clone,["@foreach"]);
             insertAfter(clone, last);
             last = clone;
@@ -342,7 +344,7 @@ const ComponentResolver=function(item,extra){
             try{
                 item.data = extra.bindElement.data;
                 let tmp = Component[c];
-                (tmp).call(item,item);
+                (tmp).call(item);
                 break;
             }catch(e){
                 console.error(e);
