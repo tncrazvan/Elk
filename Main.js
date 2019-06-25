@@ -164,16 +164,16 @@ const parseElement=async function(item,allowVariables,extra={}){
     }
     if(item.hasAttribute("import")){
         const importName = item.getAttribute("import").split("=>");
-        const moduleName = importName[0].trim();
+        const templateName = importName[0].trim();
         if(importName.length === 1 || importName[1].trim() === "*"){
-            const req = await use.module(moduleName,null,false);
-            item.applyHtml(req,allowVariables,{moduleName:moduleName});
+            const req = await use.template(templateName,null,false);
+            item.applyHtml(req,allowVariables,{templateName:templateName});
         }else{
             const selectors = importName[1].trim().split(",");
             for(let i=0;i<selectors.length;i++){
                 const selector = selectors[1];
-                const req = await use.module(moduleName);
-                const selected = req[moduleName].querySelector(selector);
+                const req = await use.template(templateName);
+                const selected = req[templateName].querySelector(selector);
                 if(selected === null) continue;
                 if(selected.tagName === "SCRIPT"){
                     if(selected.hasAttribute("src")){
@@ -202,7 +202,7 @@ const parseElement=async function(item,allowVariables,extra={}){
                 window[exportTarget].innerHTML="";
             }
             window[exportTarget].appendChild(item);
-            if(extra.moduleName && item.hasAttribute("js")){
+            if(extra.templateName && item.hasAttribute("js")){
                 await use.js(item.getAttribute("js"));
             }
         }else if(extra.bindElement){
@@ -210,7 +210,7 @@ const parseElement=async function(item,allowVariables,extra={}){
                 extra.bindElement.innerHTML="";
             }
             extra.bindElement.appendChild(item);
-            if(extra.moduleName && item.hasAttribute("js")){
+            if(extra.templateName && item.hasAttribute("js")){
                 await use.js(item.getAttribute("js"));
             }
         }
@@ -220,8 +220,8 @@ const parseElement=async function(item,allowVariables,extra={}){
             await (window[item.getAttribute("onload")])();
         }
     }
-    new ConditionResolver(item,extra);
     new ComponentResolver(item,extra);
+    new ConditionResolver(item,extra);
     if(!item.hasAttribute("@foreach")){
         new VariableResolver(item,[]);
     }else{
@@ -245,6 +245,8 @@ const ForeachResolver=function(item,extra){
             let value = tmp[key];
             let clone = item.cloneNode();
             clone.innerHTML=item.innerHTML;
+            new ComponentResolver(clone,extra);
+            new ConditionResolver(clone,extra);
             if(!clone.data){
                 clone.data={};
             }
@@ -252,8 +254,6 @@ const ForeachResolver=function(item,extra){
                 value:value,
                 key:key
             }
-            new ConditionResolver(clone,extra);
-            new ComponentResolver(clone,extra);
             new VariableResolver(clone,["@foreach"]);
             insertAfter(clone, last);
             last = clone;
@@ -369,7 +369,7 @@ const VariableResolver=function(item,path=[]){
             if(data){
                 path.forEach(function(location){
                     if(data[location]){
-                        data = item.data[location];
+                        data = data[location];
                     }else{
                         console.warn("Variable \""+(path.join("->"))+"->"+key+"\" doesn't exist in the data object.",item);
                         return;
@@ -776,11 +776,11 @@ const Includer=function(dir){
     if(!dir) dir = {
         css: "",
         js: "",
-        modules: ""
+        templates: ""
     };
     this.loadedScripts = {};
-    this.getModulesLocation=function(){
-        return dir.modules;
+    this.getTemplatesLocation=function(){
+        return dir.templates;
     };
     this.getJSLocation=function(){
         return dir.js;
@@ -789,7 +789,7 @@ const Includer=function(dir){
         return dir.css;
     };
     let $this = this;
-    this.currentModuleRequest = null;
+    this.currentTemplateRequest = null;
     this.currentCSSRequest = null;
     this.currentJavaScriptRequest = null;
     this.routes=async function(routes,pathname,eventualF=null){
@@ -805,17 +805,17 @@ const Includer=function(dir){
             $this.currentCSSRequest = file;
         });
     };
-    this.module=async function(value,bindElement=null,data=null,stateUrl=null,version=0,apply=true){
+    this.template=async function(value,bindElement=null,data=null,stateUrl=null,version=0,apply=true){
         if(stateUrl !== null) {
             state(stateUrl);
         }
 
         bindElement.data=data;
-        const module = await include.module(dir.modules,value,bindElement,version,apply,function(file){
-            $this.currentModuleRequest = file;
+        const template = await include.template(dir.templates,value,bindElement,version,apply,function(file){
+            $this.currentTemplateRequest = file;
         });
-        return module;
-    };this.modules = this.module;
+        return template;
+    };this.templates = this.template;
 };
 
 window.onpopstate=e=>{
@@ -852,7 +852,7 @@ const include={
         }
     },
     cache:{
-        modules:{},
+        templates:{},
         js:{},
         css:{},
         routes:{}
@@ -874,11 +874,11 @@ const include={
             }
         }
     },
-    modules:async function(dir,list,bindElement,version=0,apply=true,f){
+    templates:async function(dir,list,bindElement,version=0,apply=true,f){
         if(typeof list =="string")
         list = [list];
 
-        if(dir === "") dir = "/modules/";
+        if(dir === "") dir = "/templates/";
         if(dir[dir.length-1] !== "/"){
             dir +="/";
         }
@@ -889,24 +889,24 @@ const include={
             for(let i = 0; i<length; i++){
                 let file = list[i];
                 let req,text
-                if(!include.cache.modules[file]){
+                if(!include.cache.templates[file]){
                     if(file.charAt(0)==="@"){
                         req = await fetch(dir+file.substr(1)+"?v="+version);
                     }else{
                         req = await fetch(dir+file+".html?v="+version);
                     }
                     text = await req.text();
-                    include.cache.modules[file] = text;
+                    include.cache.templates[file] = text;
                 }else{
-                    text = include.cache.modules[file];
+                    text = include.cache.templates[file];
                 }
                 
                 if(apply){
-                    const moduleName = file +"#"+(Object.keys(MODULES).length+1);
-                    const o = await create("module",text,{},true,{moduleName:moduleName,bindElement:bindElement},true);
-                    /*modules[moduleName] = o;
-                    currentList[moduleName] = o;*/
-                    (f)(moduleName,o);
+                    const templateName = file +"#"+(Object.keys(TEMPLATES).length+1);
+                    const o = await create("tmp",text,{},true,{templateName:templateName,bindElement:bindElement},true);
+                    /*templates[templateName] = o;
+                    currentList[templateName] = o;*/
+                    (f)(templateName,o);
                 }else{
                     return text;
                 }
@@ -1009,16 +1009,16 @@ const include={
     }
 };
 
-include.module = include.modules;
+include.template = include.templates;
 
 
 window.use = new Includer({
-    "modules":"/modules",
+    "templates":"/templates",
     "js":"/js",
     "css":"/css"
 });
-const MODULES = {};
-//window.module=use.module;
+const TEMPLATES = {};
+//window.template=use.template;
 
 
 Array.prototype.remove = function(deleteValue) {
@@ -1058,8 +1058,8 @@ Element.prototype.css=function(attributes={}){
     return css(this,attributes);
 };
 
-Element.prototype.module=async function(moduleName,data=null,stateUrl=null,version=0,apply=true){
-    await use.module(moduleName,this,data,stateUrl,version,apply);
+Element.prototype.template=async function(templateName,data=null,stateUrl=null,version=0,apply=true){
+    await use.template(templateName,this,data,stateUrl,version,apply);
     return this;
 };
 
