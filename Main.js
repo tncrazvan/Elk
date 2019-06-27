@@ -335,15 +335,20 @@ const ConditionResolver=function(item){
 };
 ConditionResolver.stack = new Array();
 
-const Component={};
+const Components={};
 const ComponentResolver=function(item,extra){
-    const key = item.tagName;
+    let key;
+    if(item.hasAttribute("extends")){
+        key = item.getAttribute("extends");
+    }else{
+        key = item.tagName;
+    }
         
-    for ( let c in Component ) {
+    for ( let c in Components ) {
         if(c.toLowerCase() === key.toLowerCase()){
             try{
                 item.data = extra.bindElement.data;
-                let tmp = Component[c];
+                let tmp = Components[c];
                 (tmp).call(item);
                 break;
             }catch(e){
@@ -376,17 +381,26 @@ const VariableResolver=function(item,path=[]){
                     }
                 });
                 let result = new Function("return this."+key+";").call(data);
-                (callback)(input.replace(new RegExp(match),result),SUCCESS);
+                if(!isElement(result)){
+                    (callback)(input.replace(new RegExp(match),result),SUCCESS,false);
+                }else{
+                    (callback)(result,SUCCESS,true);
+                }
             }else{
-                (callback)(undefined,NO_DATA);
+                (callback)(undefined,NO_DATA,false);
             }
         });
     };
 
     if(item.children.length === 0){
-        resolve(item.innerHTML,function(result,state){
+        resolve(item.innerHTML,function(result,state,isElement){
             if(state === SUCCESS){
-                item.innerHTML = result;
+                if(!isElement){
+                    item.innerHTML = result;
+                }else{
+                    item.innerHTML = "";
+                    item.appendChild(result);
+                }
             }
         });
     };
@@ -1020,7 +1034,6 @@ window.use = new Includer({
 const TEMPLATES = {};
 //window.template=use.template;
 
-
 Array.prototype.remove = function(deleteValue) {
     for (let i = 0; i < this.length; i++) {
         if (this[i] == deleteValue) {
@@ -1039,7 +1052,7 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
 Element.prototype.extends=function(componentName){
-    let extendTmp = Component[componentName];
+    let extendTmp = Components[componentName];
     (extendTmp).call(this,this);
 };
 Element.prototype.addClassNames=function(classnames){
