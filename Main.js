@@ -157,7 +157,19 @@ const sortBy = function(key,reverse){
 const insertAfter=function(newNode, referenceNode) {
     referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
 };
-const parseElement=async function(item,allowVariables,extra={}){
+const parseElement=async function(item,allowVariables,extra={},log=false){
+
+    if(!item.hasAttribute("@prevent-data")){
+        item.data=item.parentNode.data;
+    }
+    new ComponentResolver(item,extra);
+    new ConditionResolver(item,extra);
+    if(!item.hasAttribute("@foreach")){
+        new VariableResolver(item,[]);
+    }else{
+        await ForeachResolver(item,allowVariables,extra);
+    }
+
     //if this current element has an "id" attribute set to something...
     if(item.hasAttribute("id")){
         window[item.getAttribute("id")] = item;
@@ -191,8 +203,8 @@ const parseElement=async function(item,allowVariables,extra={}){
                 }
             }
         }
-    }else if(item.children.length > 0){
-        await recursiveParser(item,allowVariables,extra);
+    }else if(item.children.length > 0 && !item.hasAttribute("@foreach")){
+        await recursiveParser(item,allowVariables,extra,log);
     }
     
     if(item.hasAttribute("export")){
@@ -220,45 +232,31 @@ const parseElement=async function(item,allowVariables,extra={}){
             await (window[item.getAttribute("onload")])();
         }
     }
-    new ComponentResolver(item,extra);
-    new ConditionResolver(item,extra);
-    if(!item.hasAttribute("@foreach")){
-        new VariableResolver(item,[]);
-    }else{
-        new ForeachResolver(item,extra);
-    }
 };
 
-const ForeachResolver=function(item,extra){
+const ForeachResolver=async function(item,allowVariables,extra){
     if(item.hasAttribute("@foreach")){
         let targetName = item.getAttribute("@foreach");
         let last = item;
-        let tmp = item.data[targetName];
+        let tmp = new Function("return "+targetName).call(item.data);
         if(item.hasAttribute("@sortby")){
             let sort = item.getAttribute("@sortby");
-            tmp = item.data[targetName];
             tmp.sort(sortBy(sort));
         }
 
         for (var key in tmp) {
             if (!tmp.hasOwnProperty(key)) continue;
-            let value = tmp[key];
             let clone = item.cloneNode();
-            clone.innerHTML=item.innerHTML;
-            new ComponentResolver(clone,extra);
-            new ConditionResolver(clone,extra);
+            clone.innerHTML = item.innerHTML
             if(!clone.data){
                 clone.data={};
             }
-            clone.data["@foreach"]={
-                value:value,
-                key:key
-            }
-            new VariableResolver(clone,["@foreach"]);
+            clone.data=tmp[key];
+            await recursiveParser(clone,allowVariables,extra);
             insertAfter(clone, last);
             last = clone;
         }
-
+        item.ghost=true;
         item.parentNode.removeChild(item);
     }
 };
@@ -274,7 +272,7 @@ const ConditionResolver=function(item){
         let statement = item.getAttribute("@if");
         if(statement.trim() !== ""){
             try{
-                result = eval(statement);
+                result = new Function("return "+statement+";").call(item.data);
                 if(result){}else{
                     item.parentNode.removeChild(item);
                 }
@@ -343,12 +341,14 @@ const ComponentResolver=function(item,extra){
     }else{
         key = item.tagName;
     }
-        
     for ( let c in Components ) {
         if(c.toLowerCase() === key.toLowerCase()){
             try{
                 item.data = extra.bindElement.data;
                 let tmp = Components[c];
+                item.refresVariables=function(){
+                    new VariableResolver(item,[]);
+                };
                 (tmp).call(item);
                 break;
             }catch(e){
@@ -380,7 +380,7 @@ const VariableResolver=function(item,path=[]){
                         return;
                     }
                 });
-                let result = new Function("return this."+key+";").call(data);
+                let result = new Function("return "+key+";").call(data);
                 if(!isElement(result)){
                     (callback)(input.replace(new RegExp(match),result),SUCCESS,false);
                 }else{
@@ -417,7 +417,7 @@ const VariableResolver=function(item,path=[]){
 };
 
 //iterating through every child node of the provided target
-const recursiveParser=async function(target,allowVariables,extra={}){
+const recursiveParser=async function(target,allowVariables,extra={},log){
     const tmp = new Array();
     await foreach(target.children,child=>{
         tmp.push(child);
@@ -443,7 +443,7 @@ const recursiveParser=async function(target,allowVariables,extra={}){
                     const alpha = options[3]?options[3]:0.7;
                     await setClickEffect(child,red,green,blue,alpha);
                 }
-                await parseElement(child,allowVariables,extra);
+                await parseElement(child,allowVariables,extra,log);
             break;
         }
     });
