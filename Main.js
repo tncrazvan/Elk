@@ -382,13 +382,13 @@ const VariableResolver=function(item,path=[]){
     const REGEX = /@[A-z0-9\.]*/g;
     const SUCCESS = 0, NO_DATA = 1, NO_MATCH = 2;
     let resolve = function(input,callback){
-        let matches = [...new Set(input.matchAll(REGEX))];
+        let matches = [...new Set(input.match(REGEX))];
         if(matches.length === 0){
             (callback)(undefined,NO_MATCH);
             return;
         }
         matches.forEach(match=>{
-            let key = match[0].substr(1);
+            let key = match.substr(1);
             let data = item.data;
             if(data){
                 path.forEach(function(location){
