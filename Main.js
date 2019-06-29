@@ -203,7 +203,7 @@ const parseElement=async function(item,allowVariables,extra={},log=false){
                 }
             }
         }
-    }else if(item.children.length > 0 && !item.hasAttribute("@foreach")){
+    }else if(item.children.length > 0 && !item.hasAttribute("@foreach") && !item.ghost){
         await recursiveParser(item,allowVariables,extra,log);
     }
     
@@ -233,7 +233,15 @@ const parseElement=async function(item,allowVariables,extra={},log=false){
         }
     }
 };
-
+const uuid=function(){
+    let dt = new Date().getTime();
+    let uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        let r = (dt + Math.random()*16)%16 | 0;
+        dt = Math.floor(dt/16);
+        return (c=='x' ? r :(r&0x3|0x8)).toString(16);
+    });
+    return uuid;
+}
 const ForeachResolver=async function(item,allowVariables,extra){
     if(item.hasAttribute("@foreach")){
         let targetName = item.getAttribute("@foreach");
@@ -251,9 +259,20 @@ const ForeachResolver=async function(item,allowVariables,extra){
             if(!clone.data){
                 clone.data={};
             }
-            clone.data=tmp[key];
-            await recursiveParser(clone,allowVariables,extra);
+            clone.isClone=true;
             insertAfter(clone, last);
+            clone.data=tmp[key];
+            new VariableResolver(clone,[]);
+            new ComponentResolver(clone,extra);
+            new ConditionResolver(clone,extra);
+            clone.data=tmp[key];
+            /*if(!item.hasAttribute("@foreach")){
+                new VariableResolver(clone,[]);
+            }else{
+                await ForeachResolver(clone,allowVariables,extra);
+            } */
+
+            await recursiveParser(clone,allowVariables,extra);
             last = clone;
         }
         item.ghost=true;
@@ -350,10 +369,10 @@ const ComponentResolver=function(item,extra){
                     new VariableResolver(item,[]);
                 };
                 (tmp).call(item);
-                break;
+                return;
             }catch(e){
                 console.error(e);
-                break;
+                return;
             }
         }
     }
