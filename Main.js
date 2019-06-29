@@ -399,12 +399,18 @@ const VariableResolver=function(item,path=[]){
                         return;
                     }
                 });
-                let result = new Function("return "+key+";").call(data);
-                if(!isElement(result)){
-                    (callback)(input.replace(new RegExp(match),result),SUCCESS,false);
-                }else{
-                    (callback)(result,SUCCESS,true);
+                try{
+                    let result = new Function("return "+key+";").call(data);
+                    if(!isElement(result)){
+                        (callback)(input.replace(new RegExp(match),result),SUCCESS,false);
+                    }else{
+                        (callback)(result,SUCCESS,true);
+                    }
+                }catch(e){
+                    console.error("Could not resolve variable "+key+".",item);
+                    (callback)(undefined,NO_DATA,false);
                 }
+                
             }else{
                 (callback)(undefined,NO_DATA,false);
             }
