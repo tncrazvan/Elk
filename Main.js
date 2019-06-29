@@ -443,11 +443,8 @@ const VariableResolver=function(item,path=[]){
 
 //iterating through every child node of the provided target
 const recursiveParser=async function(target,allowVariables,extra={},log){
-    const tmp = new Array();
-    await foreach(target.children,child=>{
-        tmp.push(child);
-    });
-    await foreach(tmp,async child=>{
+    for(let i = target.children.length-1;i >= 0;i--){
+        let child = target.children[i];
         switch(child.tagName){
             case "SCRIPT":
                 if(child.hasAttribute("src")){
@@ -471,7 +468,7 @@ const recursiveParser=async function(target,allowVariables,extra={},log){
                 await parseElement(child,allowVariables,extra,log);
             break;
         }
-    });
+    }
 };
 
 const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
