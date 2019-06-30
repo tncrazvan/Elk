@@ -389,6 +389,33 @@ const ComponentResolver=function(item,allowVariables,extra){
         }
     };
 
+    let getParentComponent = function(){
+        let parent = item.parentNode;
+        let key = parent.tagName;
+        if(parent.hasAttribute("extends")){
+            key = parent.getAttribute("extends");
+        }
+        while(true){
+            for ( let c in Components ) {
+                if(c.toLowerCase() === key.toLowerCase()){
+                    return parent;
+                }
+            }
+            if(parent.parentNode){
+                parent = parent.parentNode;
+                key = parent.tagName;
+                if(parent.hasAttribute("extends")){
+                    key = parent.getAttribute("extends");
+                }
+            }else{
+                return null;
+            }
+        }
+    };
+
+    item.getParentComponent=function(){
+        return getParentComponent();
+    };
 
     let key = item.tagName;
     parse();
