@@ -159,17 +159,6 @@ const insertAfter=function(newNode, referenceNode) {
 };
 const parseElement=async function(item,allowVariables,extra={},log=false){
 
-    if(!item.hasAttribute("@prevent-data")){
-        item.data=item.parentNode.data;
-    }
-    new ComponentResolver(item,extra);
-    new ConditionResolver(item,extra);
-    if(!item.hasAttribute("@foreach")){
-        new VariableResolver(item,[]);
-    }else{
-        await ForeachResolver(item,allowVariables,extra);
-    }
-
     //if this current element has an "id" attribute set to something...
     if(item.hasAttribute("id")){
         window[item.getAttribute("id")] = item;
@@ -203,7 +192,7 @@ const parseElement=async function(item,allowVariables,extra={},log=false){
                 }
             }
         }
-    }else if(item.children.length > 0 && !item.hasAttribute("@foreach") && !item.ghost){
+    }else if(item.children.length > 0 && !item.hasAttribute("@foreach")){
         await recursiveParser(item,allowVariables,extra,log);
     }
     
@@ -244,12 +233,13 @@ const uuid=function(){
 }
 const ForeachResolver=async function(item,allowVariables,extra){
     if(item.hasAttribute("@foreach")){
+        item.parentNode.originalHTML = item.parentNode.innerHTML;
         let targetName = item.getAttribute("@foreach");
         let last = item;
         let tmp = new Function("return "+targetName).call(item.data);
         if(item.hasAttribute("@sortby")){
             let sort = item.getAttribute("@sortby");
-            tmp.sort(sortBy(sort));
+            tmp.sort(sortBy(sort,item.hasAttribute("@desc")));
         }
 
         for (var key in tmp) {
@@ -259,20 +249,20 @@ const ForeachResolver=async function(item,allowVariables,extra){
             if(!clone.data){
                 clone.data={};
             }
-            clone.isClone=true;
+            if(last.parentNode === null){
+                return;
+            }
             insertAfter(clone, last);
             clone.data=tmp[key];
-            new VariableResolver(clone,[]);
-            new ComponentResolver(clone,extra);
-            new ConditionResolver(clone,extra);
-            clone.data=tmp[key];
-            /*if(!item.hasAttribute("@foreach")){
-                new VariableResolver(clone,[]);
-            }else{
-                await ForeachResolver(clone,allowVariables,extra);
-            } */
+            clone.key=key;
 
+            clone.originalElement = item;
+            clone.isClone=true;
+            new VariableResolver(clone,[]);
+            new ComponentResolver(clone,allowVariables,extra);
+            clone.data=tmp[key];
             await recursiveParser(clone,allowVariables,extra);
+            new ConditionResolver(clone,extra);
             last = clone;
         }
         item.ghost=true;
@@ -353,28 +343,58 @@ const ConditionResolver=function(item){
 ConditionResolver.stack = new Array();
 
 const Components={};
-const ComponentResolver=function(item,extra){
-    let key;
-    if(item.hasAttribute("extends")){
-        key = item.getAttribute("extends");
-    }else{
-        key = item.tagName;
-    }
-    for ( let c in Components ) {
-        if(c.toLowerCase() === key.toLowerCase()){
-            try{
-                item.data = extra.bindElement.data;
-                let tmp = Components[c];
-                item.refresVariables=function(){
-                    new VariableResolver(item,[]);
-                };
-                (tmp).call(item);
-                return;
-            }catch(e){
-                console.error(e);
-                return;
+const ComponentResolver=function(item,allowVariables,extra){
+    let parse = function(){
+        for ( let c in Components ) {
+            if(c.toLowerCase() === key.toLowerCase()){
+                item.originalHTML = item.innerHTML;
+                try{
+                    
+                    if(item.hasAttribute("@args")) {
+                        item.data = extra.bindElement.data;
+                    }
+                    
+                    let tmp = Components[c];
+                    
+                    item.refresh=async function(){
+                        if(this.hasAttribute("@foreach")){
+                            let parent = this.parentNode;
+                            parent.innerHTML = "";
+                            parent.appendChild(this.originalElement);
+                            this.originalElement.data=this.data;
+                            
+                            new VariableResolver(this.originalElement,[]);
+                            await ForeachResolver(this.originalElement,allowVariables,extra);
+                            await parseElement(this.originalElement,allowVariables,extra,true);
+                            new ConditionResolver(this.originalElement,extra);
+                        }else{
+                            this.innerHTML = this.originalHTML;
+                            new VariableResolver(this,[]);
+                            await recursiveParser(this,allowVariables,extra);
+                            new ConditionResolver(this,extra);
+                        }
+                    };
+    
+                    item.ref=function(name){
+                        return item.querySelector("*[ref=\""+name+"\"]");
+                    };
+    
+                    (tmp).call(item);
+                    return;
+                }catch(e){
+                    console.error(e);
+                    return;
+                }
             }
         }
+    };
+
+
+    let key = item.tagName;
+    parse();
+    if(item.hasAttribute("extends")){
+        key = item.getAttribute("extends");
+        parse();
     }
 };
 
@@ -382,6 +402,7 @@ const VariableResolver=function(item,path=[]){
     const REGEX = /@[A-z0-9\.]*/g;
     const SUCCESS = 0, NO_DATA = 1, NO_MATCH = 2;
     let resolve = function(input,callback){
+        
         let matches = [...new Set(input.match(REGEX))];
         if(matches.length === 0){
             (callback)(undefined,NO_MATCH);
@@ -392,6 +413,7 @@ const VariableResolver=function(item,path=[]){
             let data = item.data;
             if(data){
                 path.forEach(function(location){
+                    
                     if(data[location]){
                         data = data[location];
                     }else{
@@ -465,7 +487,24 @@ const recursiveParser=async function(target,allowVariables,extra={},log){
                     const alpha = options[3]?options[3]:0.7;
                     await setClickEffect(child,red,green,blue,alpha);
                 }
+
+                if(child.tagName === "NAV"){
+                    //debugger;
+                }
+
+                if(!child.hasAttribute("@prevent-data")){
+                    child.key=child.parentNode.key;
+                    child.data=child.parentNode.data;
+                }
+                new ComponentResolver(child,allowVariables,extra);
+                if(!child.hasAttribute("@foreach")){
+                    new VariableResolver(child,[]);
+                }else{
+                    await ForeachResolver(child,allowVariables,extra);
+                }
                 await parseElement(child,allowVariables,extra,log);
+                
+                new ConditionResolver(child,extra);
             break;
         }
     }
