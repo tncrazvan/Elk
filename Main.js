@@ -63,7 +63,7 @@ const isElement=function(obj) {
         (typeof obj.ownerDocument ==="object");
     }
 };
-const create=function(tag,content,options,allowVariables,extra={},async=false){
+const create=async function(tag,content,options,allowVariables,extra={},async=false){
     tag = tag.split(".");
     let element;
     for(let i = 0; i < tag.length; i++){
@@ -215,11 +215,16 @@ const parseElement=async function(item,allowVariables,extra={},log=false){
                 await use.js(item.getAttribute("js"));
             }
         }
-        if(item.onload){
-            await (item.onload)();
-        }else if(window[item.hasAttribute("onload")]){
-            await (window[item.getAttribute("onload")])();
+        if(item.mounted){
+            await item.mounted();
+        }else if(window[item.hasAttribute("mounted")]){
+            await (window[item.getAttribute("mounted")])();
         }
+    }
+    if(item.onload){
+        await item.onload();
+    }else if(window[item.hasAttribute("onload")]){
+        await (window[item.getAttribute("onload")])();
     }
 };
 const uuid=function(){
@@ -259,7 +264,7 @@ const ForeachResolver=async function(item,allowVariables,extra){
             clone.originalElement = item;
             clone.isClone=true;
             new VariableResolver(clone,[]);
-            new ComponentResolver(clone,allowVariables,extra);
+            await ComponentResolver(clone,allowVariables,extra);
             clone.data=tmp[key];
             await recursiveParser(clone,allowVariables,extra);
             new ConditionResolver(clone,extra);
@@ -343,8 +348,8 @@ const ConditionResolver=function(item){
 ConditionResolver.stack = new Array();
 
 const Components={};
-const ComponentResolver=function(item,allowVariables,extra){
-    let parse = function(){
+const ComponentResolver=async function(item,allowVariables,extra){
+    let parse = async function(){
         for ( let c in Components ) {
             if(c.toLowerCase() === key.toLowerCase()){
                 item.originalHTML = item.innerHTML;
@@ -378,8 +383,8 @@ const ComponentResolver=function(item,allowVariables,extra){
                     item.ref=function(name){
                         return item.querySelector("*[ref=\""+name+"\"]");
                     };
-    
-                    (tmp).call(item);
+
+                    await (tmp).call(item);
                     return;
                 }catch(e){
                     console.error(e);
@@ -418,7 +423,7 @@ const ComponentResolver=function(item,allowVariables,extra){
     };
 
     let key = item.tagName;
-    parse();
+    await parse();
     if(item.hasAttribute("extends")){
         key = item.getAttribute("extends");
         parse();
@@ -468,6 +473,7 @@ const VariableResolver=function(item,path=[]){
 
     if(item.children.length === 0){
         resolve(item.innerHTML,function(result,state,isElement){
+            
             if(state === SUCCESS){
                 if(!isElement){
                     item.innerHTML = result;
@@ -506,24 +512,11 @@ const recursiveParser=async function(target,allowVariables,extra={},log){
                 document.head.appendChild(child);
             break;
             default:
-                if(child.hasAttribute("clickeffect")){
-                    const options = child.getAttribute("clickeffect").split(",");
-                    const red = options[0]?options[0]:255;
-                    const green = options[1]?options[1]:255;
-                    const blue = options[2]?options[2]:255;
-                    const alpha = options[3]?options[3]:0.7;
-                    await setClickEffect(child,red,green,blue,alpha);
-                }
-
-                if(child.tagName === "NAV"){
-                    //debugger;
-                }
-
                 if(!child.hasAttribute("@prevent-data")){
                     child.key=child.parentNode.key;
                     child.data=child.parentNode.data;
                 }
-                new ComponentResolver(child,allowVariables,extra);
+                await ComponentResolver(child,allowVariables,extra);
                 if(!child.hasAttribute("@foreach")){
                     new VariableResolver(child,[]);
                 }else{
@@ -534,62 +527,6 @@ const recursiveParser=async function(target,allowVariables,extra={},log){
                 new ConditionResolver(child,extra);
             break;
         }
-    }
-};
-
-const setClickEffect=async function(element,r=255,g=255,b=255,alpha=0.7){
-    const playRippleEffect = async function(x,y,maxRadius){
-        const canvas = await create("canvas","",{
-            width: element.offsetWidth,
-            height: element.offsetHeight
-        });
-        
-        /*canvas.style.transition = "background-color 100ms";
-        canvas.style.backgroundColor = "rgba("+r+","+g+","+b+",0)";*/
-
-        //canvas.style.cursor="pointer";
-        element.appendChild(canvas);
-
-        canvas.style.position="absolute";
-        canvas.style.pointerEvents="none";
-        canvas.style.background="none";
-        canvas.style.left = Pixel(0);
-        canvas.style.top = Pixel(0);
-        
-        canvas.style.margin= "0";
-        const ctx = canvas.getContext("2d");
-        let radius = 0;
-        let opacity = 0.1;
-        (function poll(){
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            radius += 1*maxRadius/100;
-            opacity -= 0.0007;
-            ctx.fillStyle = "rgba("+r+","+g+","+b+","+opacity+")";
-            ctx.beginPath();
-            ctx.arc(x,y,radius,0,2*Math.PI);
-            ctx.fill();
-            if(radius >= maxRadius && opacity <= 0.005){
-                ctx.clearRect(0,0,canvas.width,canvas.height);
-                if(canvas.parentElement){
-                    canvas.parentElement.removeChild(canvas);
-                }
-                return;
-            };
-            canvas.style.left = Pixel(0);
-            canvas.style.top = Pixel(0);
-            setTimeout(poll,1);
-        })();
-    };
-
-    if(isMobile.any()){
-        element.addEventListener("touchend",async function(e){
-            let pos = element.getBoundingClientRect();
-            await playRippleEffect(e.changedTouches[0].clientX-pos.x,e.changedTouches[0].clientY-pos.y,element.offsetWidth);
-        });
-    }else{
-        element.addEventListener("mouseup",async function(e){
-            await playRippleEffect(e.offsetX,e.offsetY,element.offsetWidth);
-        });
     }
 };
 
@@ -613,7 +550,7 @@ const isMobile = {
         return (isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows());
     }
 };
-const applyHtml=async function(target,data,allowVariables,extra={}){
+const applyHtml=function(target,data,allowVariables,extra={}){
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
@@ -626,7 +563,7 @@ const applyHtml=async function(target,data,allowVariables,extra={}){
     //and parse it as child nodes.
     allowVariables = (isset(allowVariables)?allowVariables:false);
     target.innerHTML = data;
-    await recursiveParser(target,allowVariables,extra);
+    return recursiveParser(target,allowVariables,extra);
 };
 const foreachChild=function(children,f){
     foreach(children,function(child){
@@ -1188,10 +1125,6 @@ Element.prototype.insertChildAtIndex = function(child, index) {
     }
     return this;
 };
-
-Element.prototype.setClickEffect = function(red=255,green=255,blue=255,alpha=0.7){
-    setClickEffect(this,red,green,blue,alpha);
-}
 
 Number.prototype.truncate=function(places){
     if(!isset(Math.trunc)) return this;
