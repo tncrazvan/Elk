@@ -63,7 +63,7 @@ const isElement=function(obj) {
         (typeof obj.ownerDocument ==="object");
     }
 };
-const create=async function(tag,content,options,allowVariables,extra={},async=false){
+const create=function(tag,content,options,allowVariables,extra={},async=false){
     tag = tag.split(".");
     let element;
     for(let i = 0; i < tag.length; i++){
