@@ -461,7 +461,7 @@ const VariableResolver=function(item,path=[]){
                         (callback)(result,SUCCESS,true);
                     }
                 }catch(e){
-                    console.error("Could not resolve variable "+key+".",item);
+                    console.error("Could not resolve variable "+key,item,e);
                     (callback)(undefined,NO_DATA,false);
                 }
                 
