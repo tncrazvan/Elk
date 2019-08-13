@@ -63,7 +63,7 @@ const isElement=function(obj) {
         (typeof obj.ownerDocument ==="object");
     }
 };
-const create=function(tag,content,options,allowVariables,extra={},async=false){
+const create=function(tag,content,options,extra={},async=false){
     tag = tag.split(".");
     let element;
     for(let i = 0; i < tag.length; i++){
@@ -98,11 +98,11 @@ const create=function(tag,content,options,allowVariables,extra={},async=false){
             }
         }else if(async){
             return new Promise(async function(resolve){
-                await element.applyHtml(content,allowVariables,extra);
+                await element.applyHtml(content,extra);
                 (resolve)();
             });
         }else{
-            element.applyHtml(content,allowVariables,extra)
+            element.applyHtml(content,extra)
         }
     }
 
@@ -136,12 +136,7 @@ const sortBy = function(key,reverse){
     // we want to sort the array in reverse
     // order or not.
     const moveLarger = reverse ? -1 : 1;
-  
-    /**
-     * @param  {*} a
-     * @param  {*} b
-     * @return {Number}
-     */
+    
     return (a, b) => {
         if(a === null || b === null) return 0;
         if (a[key] < b[key]) {
@@ -157,7 +152,7 @@ const sortBy = function(key,reverse){
 const insertAfter=function(newNode, referenceNode) {
     referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
 };
-const parseElement=async function(item,allowVariables,extra={},isRefresh){
+const parseElement=async function(item,extra={}){
 
     //if this current element has an "id" attribute set to something...
     if(item.hasAttribute("id")){
@@ -168,7 +163,7 @@ const parseElement=async function(item,allowVariables,extra={},isRefresh){
         const templateName = importName[0].trim();
         if(importName.length === 1 || importName[1].trim() === "*"){
             const req = await use.template(templateName,null,false);
-            item.applyHtml(req,allowVariables,{templateName:templateName});
+            item.applyHtml(req,{templateName:templateName});
         }else{
             const selectors = importName[1].trim().split(",");
             for(let i=0;i<selectors.length;i++){
@@ -178,7 +173,7 @@ const parseElement=async function(item,allowVariables,extra={},isRefresh){
                 if(selected === null) continue;
                 if(selected.tagName === "SCRIPT"){
                     if(selected.hasAttribute("src")){
-                        await use.js("@"+selected.getAttribute("src"));
+                        await use.js(":"+selected.getAttribute("src"));
                     }else{
                         await eval(selected.innerText);
                     }
@@ -192,8 +187,8 @@ const parseElement=async function(item,allowVariables,extra={},isRefresh){
                 }
             }
         }
-    }else if(item.children.length > 0 && !item.hasAttribute("@foreach")){
-        await recursiveParser(item,allowVariables,extra,isRefresh);
+    }else if(item.children.length > 0 && !item.hasAttribute(":foreach")){
+        await recursiveParser(item,extra);
     }
     
     if(item.hasAttribute("export")){
@@ -238,53 +233,65 @@ const uuid=function(){
 }
 
 const getItemBinding=function(item,fallback="this.data"){
-    return item.hasAttribute("@bind")?item.getAttribute("@bind"):fallback
+    return item.hasAttribute(":bind")?item.getAttribute(":bind"):fallback
 }
 
-const ForeachResolver=async function(item,allowVariables,extra,bind="this.data",isRefresh=false){
+const ForeachResolver=async function(item,extra,bind="this.data"){
     let data = new Function("return "+bind+";").call(item);
 
-    if(item.hasAttribute("@foreach")){
-        item.parentNode.originalHTML = item.parentNode.innerHTML;
-        let targetName = item.getAttribute("@foreach");
+    if(item.hasAttribute(":foreach")){
+        let targetName = item.getAttribute(":foreach");
         let last = item;
         let joinedKey = targetName === ''?"this":["this",targetName].join(".");
-        
-        let tmp = new Function("return "+joinedKey).call(data);
-        if(item.hasAttribute("@sortby")){
-            let sort = item.getAttribute("@sortby");
-            tmp.sort(sortBy(sort,item.hasAttribute("@desc")));
+        let clone;
+        let i;
+        let key;
+        let attribute;
+        let binding;
+        let list = new Function("return "+joinedKey).call(data);
+        if(item.hasAttribute(":sortby")){
+            let sort = item.getAttribute(":sortby");
+            list.sort(sortBy(sort,item.hasAttribute(":desc")));
         }
-        
-        for (var key in tmp) {
-            if (!tmp.hasOwnProperty(key)) continue;
-            let clone = item.cloneNode();
-            clone.innerHTML = item.innerHTML
-            if(!clone.data){
-                clone.data={};
-            }
-            if(last.parentNode === null){
-                return;
-            }
-            insertAfter(clone, last);
-            clone.data=tmp[key];
-            clone.key=key;
-
+        if(item.clones){
+            /*item.clones.forEach(clone=>{
+                clone.parentNode.removeChild(clone);
+            });*/
+            item.originalParent.innerHTML = "";
+            item.originalParent.appendChild(item);
+        }
+        item.clones = new Array();
+        for(key in list){
+            if (!list.hasOwnProperty(key)) continue;
+            //clone = item.cloneNode();
+            clone = await create(item.tagName,item.innerHTML);
+            item.clones.push(clone);
             clone.originalElement = item;
-            clone.isClone=true;
-            new VariableResolver(clone,getItemBinding(clone));
-            if(!isRefresh) await ComponentResolver(clone,allowVariables,extra);
-            clone.data=tmp[key];
-            await recursiveParser(clone,allowVariables,extra,isRefresh);
-            new ConditionResolver(clone,getItemBinding(clone));
-            last = clone;
+            clone.originalParent = item.parentNode;
+            for(i=0;i<item.attributes.length;i++){
+                attribute = item.attributes[i];
+                if(attribute.name === 'id'){
+                    clone.setAttribute(attribute.name+''+i,attribute.value);
+                }else{
+                    clone.setAttribute(attribute.name,attribute.value);
+                }
+            }
+            insertAfter(clone,last);
+            binding = getItemBinding(clone);
+            new VariableResolver(clone,item,binding,targetName+"["+key+"]");
+            await ComponentResolver(clone,extra);
+            await recursiveParser(clone,extra);
+            new ConditionResolver(clone,binding);
         }
-        item.ghost=true;
+
+        item.originalElement = item;
+        item.originalParent = item.parentNode;
         item.parentNode.removeChild(item);
     }
+    
 };
 
-const ConditionResolver=function(item,bind="this.data",isRefresh=false){
+const ConditionResolver=function(item,bind="this.data"){
     const IF = 0, ELSE = 1, ELSEIF = 2;
     this.result=false;
     const ID = ConditionResolver.stack.length;
@@ -292,9 +299,9 @@ const ConditionResolver=function(item,bind="this.data",isRefresh=false){
 
     let data = new Function("return "+bind+";").call(item);
 
-    if(item.hasAttribute("@if")){
+    if(item.hasAttribute(":if")){
         let result = "";
-        let statement = item.getAttribute("@if");
+        let statement = item.getAttribute(":if");
         if(statement.trim() !== ""){
             try{
                 statement = statement === ''?"this":["this",statement].join(".");
@@ -311,21 +318,21 @@ const ConditionResolver=function(item,bind="this.data",isRefresh=false){
                 ConditionResolver.stack[ID] = this;
                 this.type = IF;
             }catch(e){
-                console.error("@if statement could not be parsed ",item);
+                console.error(":if statement could not be parsed ",item);
             }
         }else{
             item.originalDisplay = getComputedStyle(item, null).display;
             item.style.display = "none";
-            console.warn("@if statement does not contain a condition in ",item);
+            console.warn(":if statement does not contain a condition in ",item);
         }
-    }else if(item.hasAttribute("@elseif") ){
+    }else if(item.hasAttribute(":elseif") ){
         if(PREV !== null && ConditionResolver.stack[PREV].type === IF){
             if(ConditionResolver.stack[PREV].result){
                 item.originalDisplay = getComputedStyle(item, null).display;
                 item.style.display = "none";
             }else{
                 let result = "";
-                let statement = item.getAttribute("@elseif");
+                let statement = item.getAttribute(":elseif");
                 if(statement.trim() !== ""){
                     try{
                         statement = statement === ''?"this":["this",statement].join(".");
@@ -340,22 +347,22 @@ const ConditionResolver=function(item,bind="this.data",isRefresh=false){
                         }
                         this.result=result;
                     }catch(e){
-                        console.error("@elseif statement could not be parsed ",item);
+                        console.error(":elseif statement could not be parsed ",item);
                     }
                 }else{
                     item.originalDisplay = getComputedStyle(item, null).display;
                     item.style.display = "none";
-                    console.warn("@elseif statement does not contain a condition or the condition is redundant with the @if statement or a previous @elseif statement in ",item);
+                    console.warn(":elseif statement does not contain a condition or the condition is redundant with the :if statement or a previous :elseif statement in ",item);
                 }
             }
         }else if(item.parentNode && item.parentNode !== null){
             item.originalDisplay = getComputedStyle(item, null).display;
                     item.style.display = "none";
-            console.warn("@elseif statement must follow and @if statement. No @if statement found.",item);
+            console.warn(":elseif statement must follow and :if statement. No :if statement found.",item);
         }
         ConditionResolver.stack[ID] = this;
         this.type = ELSEIF;
-    }else if(item.hasAttribute("@else")){
+    }else if(item.hasAttribute(":else")){
         if(PREV !== null && (
             ConditionResolver.stack[PREV].type === IF ||
             ConditionResolver.stack[PREV].type === ELSEIF
@@ -400,32 +407,13 @@ const inherit = function(item,map){
 };
 
 const Components={};
-const ComponentResolver=async function(item,allowVariables,extra){
+const ComponentResolver=async function(item,extra){
     let parse = async function(){
         for ( let c in Components ) {
             if(c.toLowerCase() === key.toLowerCase()){
-                item.originalHTML = item.innerHTML;
                 try{
+                    item.originalHTML = item.innerHTML;
                     let tmp = Components[c];
-                    
-                    item.refresh=async function(){
-                        if(this.hasAttribute("@foreach")){
-                            let parent = this.parentNode;
-                            parent.innerHTML = "";
-                            parent.appendChild(this.originalElement);
-                            this.originalElement.data=this.data;
-                            
-                            new VariableResolver(this.originalElement,getItemBinding(this.originalElement),true);
-                            await ForeachResolver(this.originalElement,allowVariables,extra,getItemBinding(this.originalElement),true);
-                            await parseElement(this.originalElement,allowVariables,extra,true);
-                            new ConditionResolver(this.originalElement,getItemBinding(this.originalElement),true);
-                        }else{
-                            this.innerHTML = this.originalHTML;
-                            new VariableResolver(this,getItemBinding(item),true);
-                            await recursiveParser(this,allowVariables,extra,true);
-                            new ConditionResolver(this,getItemBinding(this),true);
-                        }
-                    };
     
                     item.ref=function(name){
                         return item.querySelector("*[ref=\""+name+"\"]");
@@ -433,8 +421,8 @@ const ComponentResolver=async function(item,allowVariables,extra){
                     
                     await (tmp).call(item);
 
-                    if(item.hasAttribute("@inherit")) {
-                        item.inherit(item.getAttribute("@inherit"));
+                    if(item.hasAttribute(":inherit")) {
+                        item.inherit(item.getAttribute(":inherit"));
                     }
                     
 
@@ -483,8 +471,8 @@ const ComponentResolver=async function(item,allowVariables,extra){
     }
 };
 
-const VariableResolver=function(item,bind="this.data",isRefresh=false){
-    const REGEX_VALUE = /^@[A-z0-9\.]*/g;
+const VariableResolver=function(item,delegate,bind="this.data",innerBind=null){
+    const REGEX_VALUE = /^\:[A-z0-9\.]*/g;
     const REGEX_VALUE_NO_SYMBOL = /^[A-z0-9\.]*/g;
     const SUCCESS = 0, NO_DATA = 1, NO_MATCH = 2;
     let resolve = function(symbol,input,callback){
@@ -495,10 +483,10 @@ const VariableResolver=function(item,bind="this.data",isRefresh=false){
         }
         matches.forEach(match=>{
             let key = match.substr(symbol?1:0);
-            let data = new Function("return "+bind+";").call(item);
+            let data = new Function("return "+bind+";").call(delegate !== null?delegate:item);
             if(data){
                 try{
-                    let joinedKey = key === ''?"this":["this",key].join(".");
+                    let joinedKey = key === ''?"this":(innerBind !== null?["this",innerBind,key]:["this",key]).join(".");
                     let result = new Function("return "+joinedKey+";").call(data);
                     if(!isElement(result)){
                         if(typeof result === 'object' || typeof result === 'function'){
@@ -511,7 +499,7 @@ const VariableResolver=function(item,bind="this.data",isRefresh=false){
                         (callback)(result,SUCCESS,true);
                     }
                 }catch(e){
-                    console.error("Could not resolve variable "+key,item,e);
+                    console.error("Could not resolve variable "+key,delegate !== null?delegate:item,e);
                     (callback)(undefined,NO_DATA,false);
                 }
                 
@@ -540,14 +528,14 @@ const VariableResolver=function(item,bind="this.data",isRefresh=false){
         let symbol = false;
         let callback;
         switch(attribute.name){
-            case "@click": 
+            case ":click": 
                 callback = function(result,state){
                     if(state === SUCCESS){
                         item.addEventListener("click",result);
                     }
                 };
             break;
-            case "@css":
+            case ":css":
                 callback = function(result,state){
                     if(state === SUCCESS){
                         item.css(result)
@@ -571,13 +559,18 @@ const VariableResolver=function(item,bind="this.data",isRefresh=false){
 };
 
 //iterating through every child node of the provided target
-const recursiveParser=async function(target,allowVariables,extra={},log,isRefresh){
-    for(let i = target.children.length-1;i >= 0;i--){
-        let child = target.children[i];
+const recursiveParser=async function(target,extra={},log){
+    let children = new Array();
+    let i;
+    for(i = 0; i < target.children.length;i++){
+        children.push(target.children[i]);
+    }
+    for(i = 0; i < children.length;i++){
+        let child = children[i];
         switch(child.tagName){
             case "SCRIPT":
                 if(child.hasAttribute("src")){
-                    await use.js("@"+child.getAttribute("src"));
+                    await use.js(":"+child.getAttribute("src"));
                 }else{
                     await eval(child.innerText);
                 }
@@ -586,17 +579,18 @@ const recursiveParser=async function(target,allowVariables,extra={},log,isRefres
                 document.head.appendChild(child);
             break;
             default:
-                if(!child.hasAttribute("@prevent-data")){
+                if(!child.hasAttribute(":prevent-data")){
                     child.key=child.parentNode.key;
                     child.data=child.parentNode.data;
                 }
-                if(!isRefresh) await ComponentResolver(child,allowVariables,extra);
-                if(!child.hasAttribute("@foreach")){
-                    new VariableResolver(child,getItemBinding(child));
+                if(!child.hasAttribute(":foreach")){
+                    await ComponentResolver(child,extra);
+                    new VariableResolver(child,null,getItemBinding(child));
                 }else{
-                    await ForeachResolver(child,allowVariables,extra);
+                    await ForeachResolver(child,extra);
+                    await ComponentResolver(child,extra);
                 }
-                await parseElement(child,allowVariables,extra,isRefresh);
+                await parseElement(child,extra);
                 
                 new ConditionResolver(child,getItemBinding(child));
             break;
@@ -624,7 +618,7 @@ const isMobile = {
         return (isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows());
     }
 };
-const applyHtml=function(target,data,allowVariables,extra={}){
+const applyHtml=function(target,data,extra={}){
     //pushing data to the target
     //NOTE: just pushing html text into an element won't execute
     //the scripting inside the data, it will just print it as plain
@@ -635,9 +629,8 @@ const applyHtml=function(target,data,allowVariables,extra={}){
     //temporary parent element
     //I'm using this to throw in the result data
     //and parse it as child nodes.
-    allowVariables = (isset(allowVariables)?allowVariables:false);
-    target.innerHTML = data;
-    return recursiveParser(target,allowVariables,extra);
+        target.innerHTML = data;
+    return recursiveParser(target,extra);
 };
 const foreachChild=function(children,f){
     foreach(children,function(child){
@@ -1003,7 +996,7 @@ const include={
                 let file = list[i];
                 let req,text
                 if(!include.cache.templates[file]){
-                    if(file.charAt(0)==="@"){
+                    if(file.charAt(0)===":"){
                         req = await fetch(dir+file.substr(1)+"?v="+version);
                     }else{
                         req = await fetch(dir+file+".html?v="+version);
@@ -1016,7 +1009,7 @@ const include={
                 
                 if(apply){
                     const templateName = file +"#"+(Object.keys(TEMPLATES).length+1);
-                    const o = await create("tmp",text,{},true,{templateName:templateName,bindElement:bindElement},true);
+                    const o = await create("tmp",text,{},{templateName:templateName,bindElement:bindElement},true);
                     /*templates[templateName] = o;
                     currentList[templateName] = o;*/
                     (f)(templateName,o);
@@ -1047,8 +1040,8 @@ const include={
 
                     let text;
                     if(!include.cache.css[file]){
-                        if(file.charAt(0)==="@"){
-                            text = await fetch(file.replace(/@/g,""));
+                        if(file.charAt(0)===":"){
+                            text = await fetch(file.replace(/\:/g,""));
                         }else{
                             text = await fetch(dir+file+".css?v="+version);
                         }
@@ -1093,8 +1086,8 @@ const include={
                     
                     let text;
                     if(!include.cache.js[file]){
-                        if(file.charAt(0)==="@"){
-                            text = await fetch(file.replace(/@/g,""));
+                        if(file.charAt(0)===":"){
+                            text = await fetch(file.replace(/\:/g,""));
                         }else{
                             text = await fetch(dir+file+".js?v="+version);
                         }
@@ -1154,6 +1147,19 @@ Element.prototype.extends=function(componentName){
     let extendTmp = Components[componentName];
     (extendTmp).call(this,this);
 };
+
+Element.prototype.refresh=async function(){
+    console.log("hereee");
+    if(!this.hasAttribute(":foreach")){
+        if(this.originalHTML) 
+            this.innerHTML = this.originalHTML;
+        new VariableResolver(this,null,getItemBinding(this));
+        await recursiveParser(this,{});
+        await ComponentResolver(this,{});
+        new ConditionResolver(this,getItemBinding(this));
+    }
+};
+
 Element.prototype.addClassNames=function(classnames){
     classnames.forEach(classname=>{
         this.classList.add(classname);
@@ -1189,8 +1195,8 @@ Element.prototype.remove=function(){
     this.parentElement.removeChild(this);
 };
 
-Element.prototype.applyHtml=async function(data,allowVariables,extra={}){
-    await applyHtml(this,data,allowVariables,extra);
+Element.prototype.applyHtml=async function(data,extra={}){
+    await applyHtml(this,data,extra);
     return this;
 };
 
