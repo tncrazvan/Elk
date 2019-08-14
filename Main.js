@@ -472,8 +472,8 @@ const ComponentResolver=async function(item,extra){
 };
 
 const VariableResolver=function(item,delegate,bind="this.data",innerBind=null){
-    const REGEX_VALUE = /^\:[A-z0-9\.]*/g;
-    const REGEX_VALUE_NO_SYMBOL = /^[A-z0-9\.]*/g;
+    const REGEX_VALUE = /^\s*\:[A-z0-9\.]*/g;
+    const REGEX_VALUE_NO_SYMBOL = /^\s*[A-z0-9\.]*/g;
     const SUCCESS = 0, NO_DATA = 1, NO_MATCH = 2;
     let resolve = function(symbol,input,callback){
         let matches = [...new Set(input.match(symbol?REGEX_VALUE:REGEX_VALUE_NO_SYMBOL))];
@@ -482,7 +482,7 @@ const VariableResolver=function(item,delegate,bind="this.data",innerBind=null){
             return;
         }
         matches.forEach(match=>{
-            let key = match.substr(symbol?1:0);
+            let key = match.trim().substr(symbol?1:0);
             let data = new Function("return "+bind+";").call(delegate !== null?delegate:item);
             if(data){
                 try{
@@ -583,12 +583,11 @@ const recursiveParser=async function(target,extra={},log){
                     child.key=child.parentNode.key;
                     child.data=child.parentNode.data;
                 }
+                await ComponentResolver(child,extra);
                 if(!child.hasAttribute(":foreach")){
-                    await ComponentResolver(child,extra);
                     new VariableResolver(child,null,getItemBinding(child));
                 }else{
-                    await ForeachResolver(child,extra);
-                    await ComponentResolver(child,extra);
+                    await ForeachResolver(child,extra,getItemBinding(child));
                 }
                 await parseElement(child,extra);
                 
