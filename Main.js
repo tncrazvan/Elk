@@ -1155,12 +1155,14 @@ Element.prototype.extends=function(componentName){
 
 Element.prototype.refresh=async function(){
     if(!this.hasAttribute(":foreach")){
+        if(this.$beforeRefresh) await this.$beforeRefresh();
         if(this.originalHTML) 
             this.innerHTML = this.originalHTML;
         new VariableResolver(this,null,getItemBinding(this));
         await recursiveParser(this,{});
         await ComponentResolver(this,{},true);
         new ConditionResolver(this,getItemBinding(this));
+        if(this.$afterRefresh) await this.$afterRefresh();
     }
 };
 
