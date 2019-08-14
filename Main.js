@@ -583,11 +583,12 @@ const recursiveParser=async function(target,extra={},log){
                     child.key=child.parentNode.key;
                     child.data=child.parentNode.data;
                 }
-                await ComponentResolver(child,extra);
                 if(!child.hasAttribute(":foreach")){
+                    await ComponentResolver(child,extra);
                     new VariableResolver(child,null,getItemBinding(child));
                 }else{
                     await ForeachResolver(child,extra,getItemBinding(child));
+                    await ComponentResolver(child,extra);
                 }
                 await parseElement(child,extra);
                 
@@ -1148,7 +1149,6 @@ Element.prototype.extends=function(componentName){
 };
 
 Element.prototype.refresh=async function(){
-    console.log("hereee");
     if(!this.hasAttribute(":foreach")){
         if(this.originalHTML) 
             this.innerHTML = this.originalHTML;
