@@ -407,7 +407,7 @@ const inherit = function(item,map){
 };
 
 const Components={};
-const ComponentResolver=async function(item,extra){
+const ComponentResolver=async function(item,extra,useOldData=false){
     let parse = async function(){
         for ( let c in Components ) {
             if(c.toLowerCase() === key.toLowerCase()){
@@ -419,12 +419,17 @@ const ComponentResolver=async function(item,extra){
                         return item.querySelector("*[ref=\""+name+"\"]");
                     };
                     
-                    await (tmp).call(item);
-
+                    if(useOldData){
+                        let olldData = item.data;
+                        await (tmp).call(item);
+                        item.data = olldData;
+                    }else{
+                        await (tmp).call(item);
+                    }
+                    
                     if(item.hasAttribute(":inherit")) {
                         item.inherit(item.getAttribute(":inherit"));
                     }
-                    
 
                     return;
                 }catch(e){
@@ -438,8 +443,8 @@ const ComponentResolver=async function(item,extra){
     let getParentComponent = function(){
         let parent = item.parentNode;
         let key = parent.tagName;
-        if(parent.hasAttribute("extends")){
-            key = parent.getAttribute("extends");
+        if(parent.hasAttribute(":extends")){
+            key = parent.getAttribute(":extends");
         }
         while(true){
             for ( let c in Components ) {
@@ -450,8 +455,8 @@ const ComponentResolver=async function(item,extra){
             if(parent.parentNode){
                 parent = parent.parentNode;
                 key = parent.tagName;
-                if(parent.hasAttribute("extends")){
-                    key = parent.getAttribute("extends");
+                if(parent.hasAttribute(":extends")){
+                    key = parent.getAttribute(":extends");
                 }
             }else{
                 return null;
@@ -465,8 +470,8 @@ const ComponentResolver=async function(item,extra){
 
     let key = item.tagName;
     await parse();
-    if(item.hasAttribute("extends")){
-        key = item.getAttribute("extends");
+    if(item.hasAttribute(":extends")){
+        key = item.getAttribute(":extends");
         parse();
     }
 };
@@ -1154,7 +1159,7 @@ Element.prototype.refresh=async function(){
             this.innerHTML = this.originalHTML;
         new VariableResolver(this,null,getItemBinding(this));
         await recursiveParser(this,{});
-        await ComponentResolver(this,{});
+        await ComponentResolver(this,{},true);
         new ConditionResolver(this,getItemBinding(this));
     }
 };
