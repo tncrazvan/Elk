@@ -233,61 +233,53 @@ const uuid=function(){
 }
 
 const getItemBinding=function(item,fallback="this.data"){
+    return "this.data";
     return item.hasAttribute(":bind")?item.getAttribute(":bind"):fallback
 }
 
 const ForeachResolver=async function(item,extra,bind="this.data"){
     let data = new Function("return "+bind+";").call(item);
-
-    if(item.hasAttribute(":foreach")){
-        let targetName = item.getAttribute(":foreach");
-        let last = item;
-        let joinedKey = targetName === ''?"this":["this",targetName].join(".");
-        let clone;
-        let i;
-        let key;
-        let attribute;
-        let binding;
-        let list = new Function("return "+joinedKey).call(data);
-        if(item.hasAttribute(":sortby")){
-            let sort = item.getAttribute(":sortby");
-            list.sort(sortBy(sort,item.hasAttribute(":desc")));
-        }
-        if(item.clones){
-            /*item.clones.forEach(clone=>{
-                clone.parentNode.removeChild(clone);
-            });*/
-            item.originalParent.innerHTML = "";
-            item.originalParent.appendChild(item);
-        }
-        item.clones = new Array();
-        for(key in list){
-            if (!list.hasOwnProperty(key)) continue;
-            //clone = item.cloneNode();
-            clone = await create(item.tagName,item.innerHTML);
-            item.clones.push(clone);
-            clone.originalElement = item;
-            clone.originalParent = item.parentNode;
-            for(i=0;i<item.attributes.length;i++){
-                attribute = item.attributes[i];
-                if(attribute.name === 'id'){
-                    clone.setAttribute(attribute.name+''+i,attribute.value);
-                }else{
-                    clone.setAttribute(attribute.name,attribute.value);
-                }
-            }
-            insertAfter(clone,last);
-            binding = getItemBinding(clone);
-            new VariableResolver(clone,item,binding,targetName+"["+key+"]");
-            await ComponentResolver(clone,extra);
-            await recursiveParser(clone,extra);
-            new ConditionResolver(clone,binding);
-        }
-
-        item.originalElement = item;
-        item.originalParent = item.parentNode;
-        item.parentNode.removeChild(item);
+    
+    let targetName = item.getAttribute(":foreach");
+    let last = item;
+    let clone;
+    let i;
+    let key;
+    let attribute;
+    let list = new Function("return "+targetName).call(data);
+    if(item.hasAttribute(":sortby")){
+        let sort = item.getAttribute(":sortby");
+        list.sort(sortBy(sort,item.hasAttribute(":desc")));
     }
+    
+    for(key in list){
+        if (!list.hasOwnProperty(key)) continue;
+        //clone = item.cloneNode(true);
+        clone = await create(item.tagName,item.innerHTML);
+        clone.$key = key;
+        clone.data = list[key];
+        clone.$originalElement = item;
+        clone.$originalParent = item.parentNode;
+        for(i=0;i<item.attributes.length;i++){
+            attribute = item.attributes[i];
+            if(attribute.name === ':foreach' || attribute.name === ':sortby' || attribute.name === ':desc') continue;
+            if(attribute.name === 'id'){
+                clone.setAttribute(attribute.name+''+i,attribute.value);
+            }else{
+                clone.setAttribute(attribute.name,attribute.value);
+            }
+        }
+        insertAfter(clone,last);
+        await ComponentResolver(clone,extra,true);
+        if(clone.$foreach)
+            clone.$foreach(clone);
+        await recursiveParser(clone,extra);
+    }
+
+    item.$originalElement = item;
+    item.$originalParent = item.parentNode;
+    item.parentNode.removeChild(item);
+    
     
 };
 
@@ -304,7 +296,6 @@ const ConditionResolver=function(item,bind="this.data"){
         let statement = item.getAttribute(":if");
         if(statement.trim() !== ""){
             try{
-                statement = statement === ''?"this":["this",statement].join(".");
                 result = new Function("return "+statement+";").call(data);
                 if(result){
                     if(!item.originalDisplay) item.originalDisplay = "";
@@ -395,40 +386,78 @@ const inherit = function(item,map){
         let rightKey = group.match(REGEX_INHERIT_RIGHT_KEY)[0];
 
         leftKey = leftKey === ''?"item":["item",leftKey].join(".");
-        //let parentData = new Function("return "+leftKey+";").call(parent);
 
         rightKey = rightKey.replace(/\:\s*/,"");
         rightKey = rightKey === ''?"parent":["parent",rightKey].join(".");
-        //let localData = new Function("return "+rightKey+";").call(item); 
 
         let tmp = new Function('parent','item',leftKey+'='+rightKey+';');
         tmp(parent,item);
     });
 };
+const resolveData=function(item,setCallback,getCallback){
+    if(!item.data) return item.data;
+    let object = item.data;
+    let root = JSON.parse(JSON.stringify(object));
+    let pointerRoot = root;
+    let copy = JSON.parse(JSON.stringify(object));
+    let pointerCopy = copy;
+    let dive=function(object,pointerRoot,pointerCopy){
+        for(let key in object){
+            if (!object.hasOwnProperty(key)) continue;
+            if(Object.getPrototypeOf(object[key]) === Object.prototype || Object.getPrototypeOf(object[key]) === Array.prototype){
+                dive(object[key],pointerRoot[key],pointerCopy[key]);
+            }else if(pointerCopy){
+                Object.defineProperty(pointerCopy, key, {
+                    get: function() { 
+                        if(item.$parsed) 
+                            (getCallback)();
+                        return pointerRoot[key]; 
+                    },
+                    set: function(value) {
+                        pointerRoot[key] = value;
+                        if(item.$parsed)
+                            (setCallback)();
+                    }
+                });
+            }
+        }
+    };
+
+    dive(object,pointerRoot,pointerCopy);
+
+    return copy;
+};
 
 const Components={};
-const ComponentResolver=async function(item,extra,useOldData=false){
+const ComponentResolver=async function(item,extra,useOldPointer=false){
+    item.$parsed = true;
+    
+    let setCallback = function(){
+        VariableResolver(item,extra);
+    };
+    let getCallback = function(){
+    };
+
+    let copy = async function(item){
+        clone = await create(item.tagName,item.innerHTML);
+        for(i=0;i<item.attributes.length;i++){
+            attribute = item.attributes[i];
+            clone.setAttribute(attribute.name,attribute.value);
+        }
+        return clone;
+    };
     let parse = async function(){
         for ( let c in Components ) {
             if(c.toLowerCase() === key.toLowerCase()){
                 try{
-                    item.originalHTML = item.innerHTML;
                     let tmp = Components[c];
-    
-                    item.ref=function(name){
-                        return item.querySelector("*[ref=\""+name+"\"]");
-                    };
                     
-                    if(useOldData){
-                        let olldData = item.data;
-                        await (tmp).call(item);
-                        item.data = olldData;
+                    if(useOldPointer){
+                        let pointer = item.data;
+                        (tmp).call(item);
+                        item.data = pointer;
                     }else{
-                        await (tmp).call(item);
-                    }
-                    
-                    if(item.hasAttribute(":inherit")) {
-                        item.inherit(item.getAttribute(":inherit"));
+                        (tmp).call(item);
                     }
 
                     return;
@@ -468,43 +497,43 @@ const ComponentResolver=async function(item,extra,useOldData=false){
         return getParentComponent();
     };
 
+    item.ref=function(name){
+        return item.querySelector("*[ref=\""+name+"\"]");
+    };
+
+    
+
     let key = item.tagName;
     await parse();
     if(item.hasAttribute(":extends")){
         key = item.getAttribute(":extends");
-        parse();
+        await parse();
     }
+
+    item.data = resolveData(item,setCallback,getCallback);
+
+    await VariableResolver(item,extra);
+    
 };
 
-const VariableResolver=function(item,delegate,bind="this.data",innerBind=null){
-    const REGEX_VALUE = /^\s*\:[A-z0-9\.]*/g;
-    const REGEX_VALUE_NO_SYMBOL = /^\s*[A-z0-9\.]*/g;
+const VariableResolver=async function(item,extra,bind="this.data"){
+    const REGEX_VALUE = /^\s*[A-z0-9\.]*/g;
     const SUCCESS = 0, NO_DATA = 1, NO_MATCH = 2;
-    let resolve = function(symbol,input,callback){
-        let matches = [...new Set(input.match(symbol?REGEX_VALUE:REGEX_VALUE_NO_SYMBOL))];
+    let resolve = function(input,callback){
+        let matches = [...new Set(input.match(REGEX_VALUE))];
         if(matches.length === 0){
             (callback)(undefined,NO_MATCH);
             return;
         }
         matches.forEach(match=>{
-            let key = match.trim().substr(symbol?1:0);
-            let data = new Function("return "+bind+";").call(delegate !== null?delegate:item);
+            let key = match.trim();
+            let data = new Function("return "+bind+";").call(item);
             if(data){
                 try{
-                    let joinedKey = key === ''?"this":(innerBind !== null?["this",innerBind,key]:["this",key]).join(".");
-                    let result = new Function("return "+joinedKey+";").call(data);
-                    if(!isElement(result)){
-                        if(typeof result === 'object' || typeof result === 'function'){
-                            (callback)(result,SUCCESS,false);
-                        }else{
-                            (callback)(input.replace(new RegExp(match),result),SUCCESS,false);
-                        }
-                        
-                    }else{
-                        (callback)(result,SUCCESS,true);
-                    }
+                    let result = new Function("return "+key+";").call(data);
+                    (callback)(result,SUCCESS,isElement(result));
                 }catch(e){
-                    console.error("Could not resolve variable "+key,delegate !== null?delegate:item,e);
+                    console.error("Could not resolve variable "+key,item,e);
                     (callback)(undefined,NO_DATA,false);
                 }
                 
@@ -513,26 +542,39 @@ const VariableResolver=function(item,delegate,bind="this.data",innerBind=null){
             }
         });
     };
-
-    if(item.children.length === 0){
-        resolve(true,item.innerHTML,function(result,state,isElement){
-            if(state === SUCCESS){
-                if(!isElement){
-                    item.innerHTML = result;
-                }else{
-                    item.innerHTML = "";
-                    item.appendChild(result);
-                }
-            }
-        });
-    };
-    
-
+    let i = 0;
     let attributes = [...item.attributes];
-    attributes.forEach(attribute=>{
-        let symbol = false;
+    for(i = 0; i < attributes.length; i++){
+        if(attributes[i].name[0] !== ":")
+            continue;
         let callback;
-        switch(attribute.name){
+        switch(attributes[i].name){
+            case ":if":
+            case ":elseif":
+            case ":else":
+                new ConditionResolver(item);
+                continue;
+            case ":foreach":
+                    if(item.$origin)
+                        item.$origin();
+                    await ForeachResolver(item,extra);
+                continue;
+            case ":sortby":
+            case ":desc":
+                //reserved attributes
+                continue;
+            case ":html":
+                callback = function(result,state,isElement){
+                    if(state === SUCCESS){
+                        if(!isElement){
+                            item.innerHTML = result;
+                        }else{
+                            item.innerHTML = "";
+                            item.appendChild(result);
+                        }
+                    }
+                };
+            break;
             case ":click": 
                 callback = function(result,state){
                     if(state === SUCCESS){
@@ -548,20 +590,18 @@ const VariableResolver=function(item,delegate,bind="this.data",innerBind=null){
                 };
             break;
             default:
-                symbol = true;
                 callback = function(result,state){
                     if(state === SUCCESS){
-                        item.setAttribute(attribute.name,result)
+                        item.setAttribute(attributes[i].name.substr(1),result)
                     }
                 };
             break;
 
         }
-        resolve(symbol,attribute.value,callback);
-    });
-
-    item.variablesResolver = true;
+        resolve(attributes[i].value,callback);
+    }
 };
+VariableResolver.stack = new Array();
 
 //iterating through every child node of the provided target
 const recursiveParser=async function(target,extra={},log){
@@ -585,19 +625,10 @@ const recursiveParser=async function(target,extra={},log){
             break;
             default:
                 if(!child.hasAttribute(":prevent-data")){
-                    child.key=child.parentNode.key;
                     child.data=child.parentNode.data;
                 }
-                if(!child.hasAttribute(":foreach")){
-                    await ComponentResolver(child,extra);
-                    new VariableResolver(child,null,getItemBinding(child));
-                }else{
-                    await ForeachResolver(child,extra,getItemBinding(child));
-                    await ComponentResolver(child,extra);
-                }
+                await ComponentResolver(child,extra);
                 await parseElement(child,extra);
-                
-                new ConditionResolver(child,getItemBinding(child));
             break;
         }
     }
@@ -1154,16 +1185,7 @@ Element.prototype.extends=function(componentName){
 };
 
 Element.prototype.refresh=async function(){
-    if(!this.hasAttribute(":foreach")){
-        if(this.$beforeRefresh) await this.$beforeRefresh();
-        if(this.originalHTML) 
-            this.innerHTML = this.originalHTML;
-        new VariableResolver(this,null,getItemBinding(this));
-        await recursiveParser(this,{});
-        await ComponentResolver(this,{},true);
-        new ConditionResolver(this,getItemBinding(this));
-        if(this.$afterRefresh) await this.$afterRefresh();
-    }
+    
 };
 
 Element.prototype.addClassNames=function(classnames){
@@ -1176,10 +1198,6 @@ Element.prototype.removeClassNames=function(classnames){
     classnames.forEach(classname=>{
         this.classList.remove(classname);
     });
-};
-
-Element.prototype.inherit=function(query){
-    return inherit(this,query);
 };
 
 Element.prototype.css=function(attributes={}){
