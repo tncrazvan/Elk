@@ -509,9 +509,13 @@ const resolveData=function(item,setCallback,getCallback){
     let dive=function(object,pointerRoot,pointerCopy){
         for(let key in object){
             if (!object.hasOwnProperty(key)) continue;
-            if((Object.getPrototypeOf(object[key]) === Object.prototype || Object.getPrototypeOf(object[key]) === Array.prototype)){
+            if(Object.getPrototypeOf(object[key]) === Object.prototype){
                 pointerRoot[key] = {};
                 pointerCopy[key] = {};
+                dive(object[key],pointerRoot[key],pointerCopy[key]);
+            }else if(Object.getPrototypeOf(object[key]) === Array.prototype){
+                pointerRoot[key] = new Array();
+                pointerCopy[key] = new Array();
                 dive(object[key],pointerRoot[key],pointerCopy[key]);
             }else if(pointerCopy){
                 if(pointerCopy.$classname){
