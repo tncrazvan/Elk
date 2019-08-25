@@ -238,6 +238,8 @@ const getItemBinding=function(item,fallback="this.data"){
 }
 
 const ForeachResolver=async function(item,extra,bind="this.data"){
+    const REGEX_MATCH_HTTP = /^https?\:\/\/.+/i;
+    //debugger;
     let data = new Function("return "+bind+";").call(item);
     let targetName = item.getAttribute(":foreach");
     let last = item;
@@ -246,7 +248,23 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
     let j;
     let key;
     let attribute;
-    let list = new Function("return "+targetName).call(data);
+    let list;
+    let hasId = item.hasAttribute("id");
+    let id = null;
+    if(hasId) id = item.getAttribute("id");
+    let hasSortBy = item.hasAttribute(":sortby");
+    let hasDesc = item.hasAttribute(":desc");
+
+    if(targetName.match(REGEX_MATCH_HTTP)){
+        const REQUEST = await fetch(targetName);
+        list = await REQUEST.json();
+    }else{
+        //resolveData(data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
+
+        //data = new Function("return "+bind+";").call(item);
+        //new Function('tmp',targetName+" = tmp").call(data,tmp);
+        list = new Function("return "+targetName).call(data);
+    }
     if(item.hasAttribute(":sortby")){
         let sort = item.getAttribute(":sortby");
         list.sort(sortBy(sort,item.hasAttribute(":desc")));
@@ -264,7 +282,9 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
             }
         }
     };
-
+    //debugger;
+    resolveData(list,CALLBACKS.getCallback,CALLBACKS.setCallback,item,extra);
+    /*
     Object.defineProperty(list, "push", {
         enumerable: false, // hide from for...in
         configurable: false, // prevent further meddling...
@@ -273,11 +293,11 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
             for (var i = 0, n = this.length, l = arguments.length; i < l; i++, n++) {
                 list[n] = arguments[i];
             }
-            resolveData(item,()=>{CALLBACKS.setCallback(item,extra);},CALLBACKS.getCallback);
+            resolveData(item.data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
             return n;
         }
     });
-
+    
     Object.defineProperty(list, "remove", {
         enumerable: false, // hide from for...in
         configurable: false, // prevent further meddling...
@@ -285,7 +305,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
         value: function () {
             delete list[arguments[0]];
             item.$clones[arguments[0]].parentNode.removeChild(item.$clones[arguments[0]]);
-            resolveData(item,()=>{CALLBACKS.setCallback(item,extra);},CALLBACKS.getCallback);
+            resolveData(item.data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
         }
     });
 
@@ -306,28 +326,35 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
             if(!list[arguments[0]])
             list[arguments[0]]={};
             dive.set(list[arguments[0]],arguments[1]);
-            resolveData(item,()=>{CALLBACKS.setCallback(item,extra);},CALLBACKS.getCallback);
+            resolveData(item.data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
         }
-    });
-
+    });*/
+    
     item.$removedClones = new Array();
 
     item.$clones = new Array();
+    item.$isClone = false;
+
     let check = async function(){
         for(key=0;key < list.length;key++){
             if (!list.hasOwnProperty(key)) continue;
             if(item.$clones[key]) continue;
-            //clone = item.cloneNode(true);
-            clone = await create(item.tagName,item.innerHTML);
+            clone = item.cloneNode(true);
+            //clone.innerHTML = item.innerHTML;
+            //debugger;
+            //clone = await create(item.tagName,item.innerHTML);
             if(key > item.$clones.length){
                 delete list[key];
                 continue;
             }
+            clone.$isClone = true;
             item.$clones[key] = clone;
             clone.$key = key;
+            clone.$dataTargetName = targetName;;
+            //resolveData(list[key],CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
             clone.data = list[key];
             clone.$originalElement = item;
-            for(i=0;i<item.attributes.length;i++){
+            /*for(i=0;i<item.attributes.length;i++){
                 attribute = item.attributes[i];
                 if(attribute.name === ':foreach' || attribute.name === ':sortby' || attribute.name === ':desc') continue;
                 if(attribute.name === 'id'){
@@ -335,7 +362,12 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
                 }else{
                     clone.setAttribute(attribute.name,attribute.value);
                 }
-            }
+            }*/
+            if(hasId) clone.setAttribute("id",id+key);
+            clone.removeAttribute(":foreach");
+            if(hasSortBy) clone.removeAttribute(":sortby");
+            if(hasDesc) clone.removeAttribute(":desc");
+            
             clone.$prev = (key === 0?item:item.$clones[key-1]);
             while(!clone.$prev.parentNode){
                 if(clone.$prev === item.$originalElement){
@@ -358,7 +390,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
             await recursiveParser(clone,extra);
             last = clone;
         }
-        setTimeout(check,0);
+        //setTimeout(check,0);
     };
 
     await check();
@@ -481,89 +513,132 @@ const CLASSNAME = {
     VARIABLE_OBJECT: 2
 };
 Object.freeze(CLASSNAME);
-const VariableObject=function(value){
-    this.$classname = CLASSNAME.VARIABLE_OBJECT;
-    this.value = value;
-};
 
 const CALLBACKS = {
-    setCallback: function(item,extra){
+    setCallback: function(key,item,extra){
+        if(item.hasAttribute(":foreach")){
+            for(let localKey in item.$clones){
+                if(!item.$clones.hasOwnProperty(localKey)) continue;
+                VariableResolver(item.$clones[localKey],extra);
+            }
+            return;
+        }
         VariableResolver(item,extra);
         if(!Components[item.tagName]){
             let parent = item.getParentComponent();
             VariableResolver(parent,extra);
         }
     },
-    getCallback: function(){
+    getCallback: function(key,item,extra){
         
     }
 };
 
-const resolveData=function(item,setCallback,getCallback){
-    if(!item.data) return item.data;
-    let object = item.data;
+const isArray = function(a) {
+    return (!!a) && (a.constructor === Array);
+};
+
+const isObject = function(a) {
+    return (!!a) && (a.constructor === Object);
+};
+
+const VariableObject=function(value,getCallback,setCallback,item,extra,ignoreDataGetter=false,ignoreDataSetter=false){
+    this.$classname = CLASSNAME.VARIABLE_OBJECT;
+    if(Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === Array.prototype){
+        resolveData(value,getCallback,setCallback,item,extra,ignoreDataGetter,ignoreDataSetter);
+    }
+    let val = value;
+
+    Object.defineProperty(this, "value", {
+        get: function() {
+            return val;
+        },
+        set: function(v) {
+            if(Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === Array.prototype){
+                resolveData(v,getCallback,setCallback,item,extra,ignoreDataGetter,ignoreDataSetter);
+            }
+            val = v;
+        }
+    });
+};
+
+const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataGetter=false,ignoreDataSetter=false){
     let root = {};
     let pointerRoot = root;
     let copy = {};
     let pointerCopy = copy;
     let dive=function(object,pointerRoot,pointerCopy){
-        for(let key in object){
-            if (!object.hasOwnProperty(key)) continue;
-            if(Object.getPrototypeOf(object[key]) === Object.prototype){
-                pointerRoot[key] = {};
-                pointerCopy[key] = {};
-                dive(object[key],pointerRoot[key],pointerCopy[key]);
-            }else if(Object.getPrototypeOf(object[key]) === Array.prototype){
-                pointerRoot[key] = new Array();
-                pointerCopy[key] = new Array();
-                dive(object[key],pointerRoot[key],pointerCopy[key]);
-            }else if(pointerCopy){
-                if(pointerCopy.$classname){
-                    continue;
+        if(object && object != null && (Object.getPrototypeOf(object) === Object.prototype || Object.getPrototypeOf(object) === Array.prototype)){
+            for(let key in object){
+                if (!object.hasOwnProperty(key)) continue;
+                if(pointerCopy){
+                    if(pointerCopy.$classname){
+                        continue;
+                    }
+                    pointerRoot[key] = object[key];
+                    pointerCopy[key] = object[key];
+                    bind(object,pointerRoot,pointerCopy,key,item,extra,getCallback,setCallback);
                 }
-                pointerRoot[key] = object[key];
-                pointerCopy[key] = object[key];
-                bind(object,pointerRoot,pointerCopy,key,getCallback,setCallback);
             }
+        }else{
+            console.log("here");
         }
     };
 
-    let bind = function(object,pointerRoot,pointerCopy,key,getCallback,setCallback){
-        const ref = new VariableObject(object[key]);
+    let bind = function(object,pointerRoot,pointerCopy,key,item,extra,getCallback,setCallback){
+        const ref = new VariableObject(object[key],getCallback,setCallback,item,extra,ignoreDataGetter,ignoreDataSetter);
         pointerCopy[key] = ref;
         pointerRoot[key] = ref;
+        /*
+        Object.defineProperty(list, "remove", {
+            enumerable: false, // hide from for...in
+            configurable: false, // prevent further meddling...
+            writable: false, // see above ^
+            value: function () {
+                delete list[arguments[0]];
+                item.$clones[arguments[0]].parentNode.removeChild(item.$clones[arguments[0]]);
+                resolveData(item.data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
+            }
+        });*/
 
         Object.defineProperty(pointerCopy, key, {
             get: function() { 
-                if(item.$parsed && !item.$ignoreDataSetter) 
-                    (getCallback)();
-                item.$ignoreDataSetter = false;
+                if(!ignoreDataGetter) 
+                    (getCallback)(key,item,extra);
+                ignoreDataGetter = false;
                 return pointerRoot[key].value;
             },
             set: function(value) {
                 if(!pointerRoot[key].$classname){
                     pointerRoot[key] = value;
                 }else{
-                    pointerRoot[key].value = value;
+                    /*if(isArray(value) || isObject(value)){
+                        pointerRoot[key].value = value;
+                    }else{*/
+                        //resolveData(value,getCallback,setCallback,ignoreDataGetter,ignoreDataSetter);
+                        pointerRoot[key].value = value;
+                        //resolveData(pointerRoot[key].value,getCallback,setCallback,ignoreDataGetter,ignoreDataSetter);
+                    //}
                 }
-                if(item.$parsed && !item.$ignoreDataSetter)
-                    (setCallback)();
-                item.$ignoreDataSetter = false;
+                if(!ignoreDataSetter)
+                    (setCallback)(key,item,extra);
+                ignoreDataSetter = false;
             }
         });
 
         Object.defineProperty(object, key, {
             get: function() { 
-                if(item.$parsed && !item.$ignoreDataSetter) 
-                    (getCallback)();
-                item.$ignoreDataSetter = false;
+                if(!ignoreDataGetter) 
+                    (getCallback)(key,item,extra);
+                ignoreDataGetter = false;
                 return pointerCopy[key];
             },
             set: function(value) {
-                    pointerCopy[key] = value;
-                if(item.$parsed && !item.$ignoreDataSetter)
-                    (setCallback)();
-                item.$ignoreDataSetter = false;
+                //resolveData(value,getCallback,setCallback,ignoreDataGetter,ignoreDataSetter);
+                pointerCopy[key] = value;
+                if(!ignoreDataSetter)
+                    (setCallback)(key,item,extra);
+                ignoreDataSetter = false;
             }
         });
     };
@@ -651,13 +726,23 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         await parse();
     }
 
-    item.data = resolveData(item,()=>{CALLBACKS.setCallback(item,extra);},CALLBACKS.getCallback);
+    if(!item.$isClone){
+        if(item.$origin)
+            item.$origin();
+        item.data = resolveData(item.data,CALLBACKS.getCallback,CALLBACKS.setCallback,item,extra);
+    }
+    await VariableResolver(item,extra,"this.data");
 
-    await VariableResolver(item,extra);
 };
 
 const VariableResolver=async function(item,extra,bind="this.data"){
-    let data = new Function("return "+bind+";").call(item);
+    let data;
+    if(item.$isClone){
+        data = new Function("return "+bind).call(item.$originalElement);
+        data = new Function("return "+item.$dataTargetName+"["+item.$key+"];").call(data);
+    }else{
+        data = new Function("return "+bind+";").call(item);
+    }
     const REGEX_VALUE = /^\s*[A-z0-9\.]*/g;
     const SUCCESS = 0, NO_DATA = 1, NO_MATCH = 2;
     let resolve = function(input,callback){
@@ -682,14 +767,12 @@ const VariableResolver=async function(item,extra,bind="this.data"){
             }
         });
     };
-    
     let bindings = {};
     let i = 0;
     let attributes = [...item.attributes];
     for(i = 0; i < attributes.length; i++){
         if(attributes[i].name[0] !== ":")
             continue;
-
         let callback;
         if(attributes[i].name.substr(0,3) === ':on'){
             callback = function(result,state){
@@ -706,8 +789,6 @@ const VariableResolver=async function(item,extra,bind="this.data"){
                         new ConditionResolver(item);
                     continue;
                 case ":foreach":
-                        if(item.$origin)
-                            item.$origin();
                         await ForeachResolver(item,extra);
                     continue;
                 case ":sortby":
@@ -1379,8 +1460,8 @@ const TEMPLATES = {};
 Array.prototype.remove = function(deleteValue) {
     for (let i = 0; i < this.length; i++) {
         if (this[i] == deleteValue) {
-        this.splice(i, 1);
-        i--;
+            this.splice(i, 1);
+            i--;
         }
     }
     return this;
