@@ -232,10 +232,6 @@ const uuid=function(){
     return uuid;
 }
 
-const getItemBinding=function(item,fallback="this.data"){
-    return "this.data";
-    return item.hasAttribute(":bind")?item.getAttribute(":bind"):fallback
-}
 
 const ForeachResolver=async function(item,extra,bind="this.data"){
     const REGEX_MATCH_HTTP = /^https?\:\/\/.+/i;
@@ -265,7 +261,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
         //new Function('tmp',targetName+" = tmp").call(data,tmp);
         list = new Function("return "+targetName).call(data);
     }
-    if(item.hasAttribute(":sortby")){
+    if(hasSortBy){
         let sort = item.getAttribute(":sortby");
         list.sort(sortBy(sort,item.hasAttribute(":desc")));
     }
@@ -329,14 +325,27 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
             resolveData(item.data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
         }
     });*/
-    
-    item.$removedClones = new Array();
+
+    /*if(item.$clones){
+        for(let child in item.$clones){
+            if(!child.parentNode) continue;
+            child.parentNode.removeChild(child);
+        }
+    }*/
+
+    if(item.$clones){
+        for(let key in item.$clones){
+            if(item.$clones[key].parentNode)
+                item.$clones[key].parentNode.removeChild(item.$clones[key]);
+        }
+    }
 
     item.$clones = new Array();
     item.$isClone = false;
 
     let check = async function(){
-        for(key=0;key < list.length;key++){
+        let first = true;
+        for(let key in list){
             if (!list.hasOwnProperty(key)) continue;
             if(item.$clones[key]) continue;
             clone = item.cloneNode(true);
@@ -351,24 +360,17 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
             item.$clones[key] = clone;
             clone.$key = key;
             clone.$dataTargetName = targetName;;
-            //resolveData(list[key],CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
+
             clone.data = list[key];
             clone.$originalElement = item;
-            /*for(i=0;i<item.attributes.length;i++){
-                attribute = item.attributes[i];
-                if(attribute.name === ':foreach' || attribute.name === ':sortby' || attribute.name === ':desc') continue;
-                if(attribute.name === 'id'){
-                    clone.setAttribute(attribute.name+''+key,attribute.value);
-                }else{
-                    clone.setAttribute(attribute.name,attribute.value);
-                }
-            }*/
+
             if(hasId) clone.setAttribute("id",id+key);
             clone.removeAttribute(":foreach");
             if(hasSortBy) clone.removeAttribute(":sortby");
             if(hasDesc) clone.removeAttribute(":desc");
             
-            clone.$prev = (key === 0?item:item.$clones[key-1]);
+            clone.$prev = (first?item:item.$clones[key-1]);
+
             while(!clone.$prev.parentNode){
                 if(clone.$prev === item.$originalElement){
                     clone.$prev = clone.$prev.$originalParent;
@@ -380,7 +382,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
             if(clone.$prev === item.$originalParent){
                 clone.$originalParent =  clone.$prev;
             }else{
-                clone.$originalParent =  (key === 0?item.parentNode:clone.$prev.$originalParent);
+                clone.$originalParent =  (first?item.parentNode:clone.$prev.$originalParent);
             }
             
             insertAfter(clone,clone.$prev);
@@ -389,6 +391,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
                 clone.$foreach(clone);
             await recursiveParser(clone,extra);
             last = clone;
+            first=false;
         }
         //setTimeout(check,0);
     };
@@ -515,8 +518,8 @@ const CLASSNAME = {
 Object.freeze(CLASSNAME);
 
 const CALLBACKS = {
-    setCallback: function(key,item,extra){
-        if(item.hasAttribute(":foreach")){
+    setCallback: function(key,item,extra,triggerForEach){
+        if(item.hasAttribute(":foreach") && !triggerForEach){
             for(let localKey in item.$clones){
                 if(!item.$clones.hasOwnProperty(localKey)) continue;
                 VariableResolver(item.$clones[localKey],extra);
@@ -529,7 +532,7 @@ const CALLBACKS = {
             VariableResolver(parent,extra);
         }
     },
-    getCallback: function(key,item,extra){
+    getCallback: function(key,item,extra,triggerForEach){
         
     }
 };
@@ -542,10 +545,10 @@ const isObject = function(a) {
     return (!!a) && (a.constructor === Object);
 };
 
-const VariableObject=function(value,getCallback,setCallback,item,extra,ignoreDataGetter=false,ignoreDataSetter=false){
+const VariableObject=function(value,getCallback,setCallback,item,extra,ignoreDataGetter=false,ignoreDataSetter=false,triggerForEach=false){
     this.$classname = CLASSNAME.VARIABLE_OBJECT;
-    if(Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === Array.prototype){
-        resolveData(value,getCallback,setCallback,item,extra,ignoreDataGetter,ignoreDataSetter);
+    if(value && value !== null && typeof(value) !== "string" && typeof(value) !== "number" && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === Array.prototype)){
+        resolveData(value,getCallback,setCallback,item,extra,ignoreDataGetter,ignoreDataSetter,triggerForEach);
     }
     let val = value;
 
@@ -554,15 +557,15 @@ const VariableObject=function(value,getCallback,setCallback,item,extra,ignoreDat
             return val;
         },
         set: function(v) {
-            if(Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === Array.prototype){
-                resolveData(v,getCallback,setCallback,item,extra,ignoreDataGetter,ignoreDataSetter);
+            if(v && v !== null && typeof(v) !== "string" && typeof(v) !== "number" && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === Array.prototype)){
+                resolveData(v,getCallback,setCallback,item,extra,ignoreDataGetter,ignoreDataSetter,triggerForEach);
             }
             val = v;
         }
     });
 };
 
-const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataGetter=false,ignoreDataSetter=false){
+const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataGetter=false,ignoreDataSetter=false,triggerForEach=false){
     let root = {};
     let pointerRoot = root;
     let copy = {};
@@ -577,7 +580,33 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
                     }
                     pointerRoot[key] = object[key];
                     pointerCopy[key] = object[key];
-                    bind(object,pointerRoot,pointerCopy,key,item,extra,getCallback,setCallback);
+                    bind(object,pointerRoot,pointerCopy,key,item,extra,getCallback,setCallback,triggerForEach);
+
+                    if (!object.hasOwnProperty("delete")){
+                        Object.defineProperty(object, "delete", {
+                            enumerable: false, // hide from for...in
+                            configurable: false, // prevent further meddling...
+                            writable: false, // see above ^
+                            value: function (key) {
+                                object[key] = undefined;
+                            }
+                        });
+                    }
+
+                    if (!object.hasOwnProperty("push")){
+                        Object.defineProperty(object, "push", {
+                            enumerable: false, // hide from for...in
+                            configurable: false, // prevent further meddling...
+                            writable: false, // see above ^
+                            value: function (value) {
+                                object[object.length] = value;
+                                resolveData(object,getCallback,setCallback,item,extra,ignoreDataGetter,ignoreDataSetter,true);
+                                if(!ignoreDataSetter)
+                                    (setCallback)(key,item,extra,true);
+                                ignoreDataSetter = false;
+                            }
+                        });
+                    }
                 }
             }
         }else{
@@ -585,7 +614,7 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
         }
     };
 
-    let bind = function(object,pointerRoot,pointerCopy,key,item,extra,getCallback,setCallback){
+    let bind = function(object,pointerRoot,pointerCopy,key,item,extra,getCallback,setCallback,triggerForEach){
         const ref = new VariableObject(object[key],getCallback,setCallback,item,extra,ignoreDataGetter,ignoreDataSetter);
         pointerCopy[key] = ref;
         pointerRoot[key] = ref;
@@ -604,7 +633,7 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
         Object.defineProperty(pointerCopy, key, {
             get: function() { 
                 if(!ignoreDataGetter) 
-                    (getCallback)(key,item,extra);
+                    (getCallback)(key,item,extra,triggerForEach);
                 ignoreDataGetter = false;
                 return pointerRoot[key].value;
             },
@@ -621,7 +650,7 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
                     //}
                 }
                 if(!ignoreDataSetter)
-                    (setCallback)(key,item,extra);
+                    (setCallback)(key,item,extra,triggerForEach);
                 ignoreDataSetter = false;
             }
         });
@@ -629,7 +658,7 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
         Object.defineProperty(object, key, {
             get: function() { 
                 if(!ignoreDataGetter) 
-                    (getCallback)(key,item,extra);
+                    (getCallback)(key,item,extra,triggerForEach);
                 ignoreDataGetter = false;
                 return pointerCopy[key];
             },
@@ -637,7 +666,7 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
                 //resolveData(value,getCallback,setCallback,ignoreDataGetter,ignoreDataSetter);
                 pointerCopy[key] = value;
                 if(!ignoreDataSetter)
-                    (setCallback)(key,item,extra);
+                    (setCallback)(key,item,extra,triggerForEach);
                 ignoreDataSetter = false;
             }
         });
@@ -731,7 +760,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             item.$origin();
         item.data = resolveData(item.data,CALLBACKS.getCallback,CALLBACKS.setCallback,item,extra);
     }
-    await VariableResolver(item,extra,"this.data");
+    await VariableResolver(item,extra);
 
 };
 
@@ -740,6 +769,7 @@ const VariableResolver=async function(item,extra,bind="this.data"){
     if(item.$isClone){
         data = new Function("return "+bind).call(item.$originalElement);
         data = new Function("return "+item.$dataTargetName+"["+item.$key+"];").call(data);
+        if(data === undefined && item.parentNode) item.parentNode.removeChild(item);
     }else{
         data = new Function("return "+bind+";").call(item);
     }
