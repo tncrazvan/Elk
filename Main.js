@@ -346,7 +346,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
     let check = async function(){
         let first = true;
         for(let key in list){
-            if (!list.hasOwnProperty(key)) continue;
+            if (!list.hasOwnProperty(key) || list[key] === undefined) continue;
             if(item.$clones[key]) continue;
             clone = item.cloneNode(true);
             //clone.innerHTML = item.innerHTML;
@@ -402,7 +402,8 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
 
     item.$originalElement = item;
     item.$originalParent = item.parentNode;
-    item.parentNode.removeChild(item);
+    if(item.parentNode)
+        item.parentNode.removeChild(item);
     
     
 };
@@ -529,7 +530,8 @@ const CALLBACKS = {
         VariableResolver(item,extra);
         if(!Components[item.tagName]){
             let parent = item.getParentComponent();
-            VariableResolver(parent,extra);
+            if(parent)
+                VariableResolver(parent,extra);
         }
     },
     getCallback: function(key,item,extra,triggerForEach){
@@ -588,6 +590,9 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
                             configurable: false, // prevent further meddling...
                             writable: false, // see above ^
                             value: function (key) {
+                                if(!key){
+                                    throw new Error("In order to delete an object you must specify its key.")
+                                }
                                 object[key] = undefined;
                             }
                         });
@@ -896,7 +901,8 @@ const VariableResolver=async function(item,extra,bind="this.data"){
             }
         };
         const observer = new MutationObserver(callback);
-        observer.observe(item.$originalParent.parentNode, config);
+        if(item.$originalParent && item.$originalParent.parentNode)
+            observer.observe(item.$originalParent.parentNode, config);
     }else{
         const config = {attributes: true, subtree: true, characterData: true};
         const callback = function(mutationsList, observer) {
