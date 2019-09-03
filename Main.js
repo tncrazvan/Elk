@@ -333,21 +333,27 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
         }
     }*/
 
+    /*
     if(item.$clones){
         for(let key in item.$clones){
             if(item.$clones[key].parentNode)
                 item.$clones[key].parentNode.removeChild(item.$clones[key]);
         }
     }
+    */
 
-    item.$clones = new Array();
+    if(!item.$clones)
+        item.$clones = new Array();
     item.$isClone = false;
 
     let check = async function(){
         let first = true;
         for(let key in list){
             if (!list.hasOwnProperty(key) || list[key] === undefined) continue;
-            if(item.$clones[key]) continue;
+            if(item.$clones[key]){
+                first = false;
+                continue;
+            }
             clone = item.cloneNode(true);
             //clone.innerHTML = item.innerHTML;
             //debugger;
@@ -369,7 +375,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
             if(hasSortBy) clone.removeAttribute(":sortby");
             if(hasDesc) clone.removeAttribute(":desc");
             
-            clone.$prev = (first?item:item.$clones[key-1]);
+            clone.$prev = (first?item:item.$lastClone);
 
             while(!clone.$prev.parentNode){
                 if(clone.$prev === item.$originalElement){
@@ -391,6 +397,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
                 clone.$foreach(clone);
             await recursiveParser(clone,extra);
             last = clone;
+            item.$lastClone = clone;
             first=false;
         }
         //setTimeout(check,0);
