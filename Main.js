@@ -235,9 +235,10 @@ const uuid=function(){
 
 const ForeachResolver=async function(item,extra,bind="this.data"){
     const REGEX_MATCH_HTTP = /^https?\:\/\/.+/i;
+    const REGEX_MATCH_HTTP_WITH_ARROW = /^https?\:\/\/.+(?=\=\>)/i;
     //debugger;
     let data = new Function("return "+bind+";").call(item);
-    let targetName = item.getAttribute(":foreach");
+    let targetName = item.getAttribute(":foreach").trim();
     let last = item;
     let clone;
     let i;
@@ -250,17 +251,20 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
     if(hasId) id = item.getAttribute("id");
     let hasSortBy = item.hasAttribute(":sortby");
     let hasDesc = item.hasAttribute(":desc");
+    if(targetName.match(REGEX_MATCH_HTTP_WITH_ARROW)){
+        const SPLIT = targetName.split(/\=\>/i);
+        const REQUEST = await fetch(SPLIT[0].trim());
+        targetName = SPLIT[1].trim();
+        new Function("list",targetName+"=list;").call(data,await REQUEST.json());
 
-    if(targetName.match(REGEX_MATCH_HTTP)){
+        list = new Function("return "+targetName).call(data);
+    }else if(targetName.match(REGEX_MATCH_HTTP)){
         const REQUEST = await fetch(targetName);
         list = await REQUEST.json();
     }else{
-        //resolveData(data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
-
-        //data = new Function("return "+bind+";").call(item);
-        //new Function('tmp',targetName+" = tmp").call(data,tmp);
         list = new Function("return "+targetName).call(data);
     }
+
     if(hasSortBy){
         let sort = item.getAttribute(":sortby");
         list.sort(sortBy(sort,item.hasAttribute(":desc")));
@@ -280,67 +284,6 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
     };
     //debugger;
     resolveData(list,CALLBACKS.getCallback,CALLBACKS.setCallback,item,extra);
-    /*
-    Object.defineProperty(list, "push", {
-        enumerable: false, // hide from for...in
-        configurable: false, // prevent further meddling...
-        writable: false, // see above ^
-        value: function () {
-            for (var i = 0, n = this.length, l = arguments.length; i < l; i++, n++) {
-                list[n] = arguments[i];
-            }
-            resolveData(item.data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
-            return n;
-        }
-    });
-    
-    Object.defineProperty(list, "remove", {
-        enumerable: false, // hide from for...in
-        configurable: false, // prevent further meddling...
-        writable: false, // see above ^
-        value: function () {
-            delete list[arguments[0]];
-            item.$clones[arguments[0]].parentNode.removeChild(item.$clones[arguments[0]]);
-            resolveData(item.data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
-        }
-    });
-
-    Object.defineProperty(list, "get", {
-        enumerable: false, // hide from for...in
-        configurable: false, // prevent further meddling...
-        writable: false, // see above ^
-        value: function () {
-            return list[arguments[0]];
-        }
-    });
-
-    Object.defineProperty(list, "set", {
-        enumerable: false, // hide from for...in
-        configurable: false, // prevent further meddling...
-        writable: false, // see above ^
-        value: function () {
-            if(!list[arguments[0]])
-            list[arguments[0]]={};
-            dive.set(list[arguments[0]],arguments[1]);
-            resolveData(item.data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
-        }
-    });*/
-
-    /*if(item.$clones){
-        for(let child in item.$clones){
-            if(!child.parentNode) continue;
-            child.parentNode.removeChild(child);
-        }
-    }*/
-
-    /*
-    if(item.$clones){
-        for(let key in item.$clones){
-            if(item.$clones[key].parentNode)
-                item.$clones[key].parentNode.removeChild(item.$clones[key]);
-        }
-    }
-    */
 
     if(!item.$clones)
         item.$clones = new Array();
