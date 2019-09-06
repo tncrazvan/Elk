@@ -234,8 +234,6 @@ const uuid=function(){
 
 
 const ForeachResolver=async function(item,extra,bind="this.data"){
-    const REGEX_MATCH_HTTP = /^https?\:\/\/.+/i;
-    const REGEX_MATCH_HTTP_WITH_ARROW = /^https?\:\/\/.+(?=\=\>)/i;
     //debugger;
     let data = new Function("return "+bind+";").call(item);
     let targetName = item.getAttribute(":foreach").trim();
@@ -251,7 +249,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
     if(hasId) id = item.getAttribute("id");
     let hasSortBy = item.hasAttribute(":sortby");
     let hasDesc = item.hasAttribute(":desc");
-    if(targetName.match(REGEX_MATCH_HTTP_WITH_ARROW)){
+    /*if(targetName.match(REGEX_MATCH_HTTP_WITH_ARROW)){
         const SPLIT = targetName.split(/\=\>/i);
         const REQUEST = await fetch(SPLIT[0].trim());
         targetName = SPLIT[1].trim();
@@ -261,9 +259,9 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
     }else if(targetName.match(REGEX_MATCH_HTTP)){
         const REQUEST = await fetch(targetName);
         list = await REQUEST.json();
-    }else{
+    }else{*/
         list = new Function("return "+targetName).call(data);
-    }
+    //}
 
     if(hasSortBy){
         let sort = item.getAttribute(":sortby");
@@ -634,8 +632,9 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
 
 const Components={};
 const ComponentResolver=async function(item,extra,useOldPointer=false){
+    const REGEX_MATCH_HTTP = /^https?\:\/\/.+/i;
+    const REGEX_MATCH_HTTP_WITH_ARROW = /^https?\:\/\/.+(?=\=\>)/i;
     item.$parsed = true;
-
     let copy = async function(item){
         clone = await create(item.tagName,item.innerHTML);
         for(i=0;i<item.attributes.length;i++){
@@ -657,8 +656,19 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                         item.data = pointer;
                     }else{
                         (tmp).call(item);
+                        if(item.hasAttribute(":fetch")){
+                            let fetchUrl = item.getAttribute(":fetch");
+                            if(fetchUrl.match(REGEX_MATCH_HTTP_WITH_ARROW)){
+                                const SPLIT = fetchUrl.split(/\=\>/i);
+                                const REQUEST = await fetch(SPLIT[0].trim());
+                                const target = SPLIT[1].trim();
+                                new Function("response",target+"=response;").call(item.data,await REQUEST.json());
+                            }else if(fetchUrl.match(REGEX_MATCH_HTTP)){
+                                const REQUEST = await fetch(fetchUrl);
+                                item.data = await REQUEST.json();
+                            }
+                        }
                     }
-
                     return;
                 }catch(e){
                     console.error(e);
@@ -768,6 +778,9 @@ const VariableResolver=async function(item,extra,bind="this.data"){
             };
         }else{
             switch(attributes[i].name){
+                case ":fetch":
+                    continue;
+                break;
                 case ":if":
                 case ":elseif":
                 case ":else":
