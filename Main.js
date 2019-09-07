@@ -63,7 +63,60 @@ const isElement=function(obj) {
         (typeof obj.ownerDocument ==="object");
     }
 };
+
+const ObjectInspector=function(object,callback=null){
+    for(let key in object){
+        if(!input.hasOwnProperty(key)) continue;
+        if(callback !== null)
+            if((callback)(key) === true)
+                return;
+    }
+}
+
+const LinkedList = function(){
+    this.head = null;
+    this.push=function(element){
+        element.previous = this.head;
+        if(this.previous === null){
+            this.tail = element;
+        }
+        this.head = element;
+    };
+
+    this.pop=function(){
+        if(this.head !== null){
+            const result = this.head;
+            this.head = this.head.previous;
+            return result;
+        }
+        return null;
+    };
+};
+
+const LinkedListElement = function(value){
+    this.previous = null;
+    this.next = null;
+    this.value = value;
+};
+
+const init = function(name,callback = null){
+    name = name.split(".");
+    let pointer = Components;
+    for(let i=0;i<name.length;i++){
+        if(!pointer[name[i]]){
+            if(callback !== null && i===name.length-1){
+                pointer[name[i]] = callback;
+            }else{
+                pointer[name[i]] = {};
+            }
+        }
+        pointer = pointer[name[i]];
+    }
+    return;
+};
+
 const create=function(tag,content,options,extra={},async=false){
+    
     tag = tag.split(".");
     let element;
     for(let i = 0; i < tag.length; i++){
@@ -562,8 +615,6 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
                     }
                 }
             }
-        }else{
-            console.log("here");
         }
     };
 
@@ -631,48 +682,47 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
 };
 
 const Components={};
+
 const ComponentResolver=async function(item,extra,useOldPointer=false){
     const REGEX_MATCH_HTTP = /^https?\:\/\/.+/i;
     const REGEX_MATCH_HTTP_WITH_ARROW = /^https?\:\/\/.+(?=\=\>)/i;
     item.$parsed = true;
-    let copy = async function(item){
-        clone = await create(item.tagName,item.innerHTML);
-        for(i=0;i<item.attributes.length;i++){
-            attribute = item.attributes[i];
-            clone.setAttribute(attribute.name,attribute.value);
-        }
-        return clone;
-    };
 
-    let parse = async function(){
-        for ( let c in Components ) {
+    let parse = async function(pointer,keys,index){
+        if(!keys[index]) return;
+        const key = keys[index];
+        for (let c in pointer) {
             if(c.toLowerCase() === key.toLowerCase()){
-                try{
-                    let tmp = Components[c];
-                    
-                    if(useOldPointer){
-                        let pointer = item.data;
-                        (tmp).call(item);
-                        item.data = pointer;
-                    }else{
-                        (tmp).call(item);
-                        if(item.hasAttribute(":fetch")){
-                            let fetchUrl = item.getAttribute(":fetch");
-                            if(fetchUrl.match(REGEX_MATCH_HTTP_WITH_ARROW)){
-                                const SPLIT = fetchUrl.split(/\=\>/i);
-                                const REQUEST = await fetch(SPLIT[0].trim());
-                                const target = SPLIT[1].trim();
-                                new Function("response",target+"=response;").call(item.data,await REQUEST.json());
-                            }else if(fetchUrl.match(REGEX_MATCH_HTTP)){
-                                const REQUEST = await fetch(fetchUrl);
-                                item.data = await REQUEST.json();
+                if(!isFunction(pointer[c])){
+                    await parse(pointer[c],keys,index+1);
+                }else{
+                    try{
+                        let tmp = pointer[c];
+                        
+                        if(useOldPointer){
+                            let pointer = item.data;
+                            (tmp).call(item);
+                            item.data = pointer;
+                        }else{
+                            if(item.hasAttribute(":fetch")){
+                                let fetchUrl = item.getAttribute(":fetch");
+                                if(fetchUrl.match(REGEX_MATCH_HTTP_WITH_ARROW)){
+                                    const SPLIT = fetchUrl.split(/\=\>/i);
+                                    const REQUEST = await fetch(SPLIT[0].trim());
+                                    const target = SPLIT[1].trim();
+                                    new Function("response",target+"=response;").call(item.data,await REQUEST.json());
+                                }else if(fetchUrl.match(REGEX_MATCH_HTTP)){
+                                    const REQUEST = await fetch(fetchUrl);
+                                    item.data = await REQUEST.json();
+                                }
                             }
+                            (tmp).call(item);
                         }
+                        return;
+                    }catch(e){
+                        console.error(e);
+                        return;
                     }
-                    return;
-                }catch(e){
-                    console.error(e);
-                    return;
                 }
             }
         }
@@ -713,11 +763,11 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
 
     
 
-    let key = item.tagName;
-    await parse();
+    let key = item.tagName.split(".");
+    await parse(Components,key,0);
     if(item.hasAttribute(":extends")){
         key = item.getAttribute(":extends");
-        await parse();
+        await parse(Components,key,0);
     }
 
     if(!item.$isClone){
@@ -1026,8 +1076,7 @@ const getInputCursorPos=function(input) {
         start: input.selectionStart,
         end: input.selectionEnd
         };
-    }
-    else if (input.createTextRange) {
+    }else if (input.createTextRange) {
         let sel = document.selection.createRange();
         if (sel.parentElement() === input) {
         let rng = input.createTextRange();
@@ -1474,6 +1523,10 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
 Element.prototype.extends=function(componentName){
+    if(!Components[componentName]){
+        console.error("Component ",componentName," not found.");
+        return;
+    }
     let extendTmp = Components[componentName];
     (extendTmp).call(this,this);
 };
