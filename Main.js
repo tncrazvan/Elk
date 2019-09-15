@@ -757,7 +757,8 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         let result = await lookup(Components,keys[keys.length-1]);
         if(!result){
             item.$isComponent = false;
-            console.warn("Could not find component ",keys.join("/"));
+            if(item.hasAttribute("@follow"))
+                console.warn("Component ",keys.join("/")," seems to have no definition.");
         }else{
             item.$isComponent = true;
         }
@@ -834,14 +835,10 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     
     //debugger;
     let key = [...namespace,item.tagName];
-    if(!(await parse(Components,key,0))){
-        //await parse(Components,["_NOT_FOUND"],0)
-    }
+    await parse(Components,key,0)
     if(item.hasAttribute(":extends")){
         key = [...namespace,item.getAttribute(":extends")];
-        if(!(await parse(Components,key,0))){
-            //await parse(Components,["_NOT_FOUND"],0)
-        }
+        await parse(Components,key,0)
     }
     
 
