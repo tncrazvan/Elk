@@ -100,16 +100,16 @@ const LinkedListElement = function(value){
 };
 
 const create=function(tag,content,options,extra={},async=false){
-    
+    let ts;
     tag = tag.split(".");
     let element;
     for(let i = 0; i < tag.length; i++){
         if(i === 0){
-            tmp = tag[i].split("#");
-            if(tmp[0] === "") tmp[0] = "div";
-            element = document.createElement(tmp[0]);
-            if(tmp.length > 1){
-                window[tmp[1]] = element;
+            ts = tag[i].split("#");
+            if(ts[0] === "") ts[0] = "div";
+            element = document.createElement(ts[0]);
+            if(ts.length > 1){
+                window[ts[1]] = element;
             }
         }else{
             element.className +=tag[i];
@@ -125,6 +125,8 @@ const create=function(tag,content,options,extra={},async=false){
             if(content.length > 0){
                 element.innerHTML = "";
                 for(let i = 0; i<content.length; i++){
+                    if(content[i] === undefined || content[i] === null)
+                        continue;
                     const item = content[i];
                     if(item.constructor.name == "String"){
                         element.innerHTML += item;
@@ -269,8 +271,9 @@ const uuid=function(){
     return uuid;
 }
 
+const COMPONENT_DATA_NAME = "this.data";
 
-const ForeachResolver=async function(item,extra,bind="this.data"){
+const ForeachResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
     //debugger;
     let data = new Function("return "+bind+";").call(item);
     let targetName = item.getAttribute(":foreach").trim();
@@ -286,19 +289,9 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
     if(hasId) id = item.getAttribute("id");
     let hasSortBy = item.hasAttribute(":sortby");
     let hasDesc = item.hasAttribute(":desc");
-    /*if(targetName.match(REGEX_MATCH_HTTP_WITH_ARROW)){
-        const SPLIT = targetName.split(/\=\>/i);
-        const REQUEST = await fetch(SPLIT[0].trim());
-        targetName = SPLIT[1].trim();
-        new Function("list",targetName+"=list;").call(data,await REQUEST.json());
 
-        list = new Function("return "+targetName).call(data);
-    }else if(targetName.match(REGEX_MATCH_HTTP)){
-        const REQUEST = await fetch(targetName);
-        list = await REQUEST.json();
-    }else{*/
-        list = new Function("return "+targetName).call(data);
-    //}
+    list = new Function("return "+targetName).call(data);
+    
 
     if(hasSortBy){
         let sort = item.getAttribute(":sortby");
@@ -318,6 +311,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
         }
     };
     //debugger;
+    
     resolveData(list,CALLBACKS.getCallback,CALLBACKS.setCallback,item,extra);
 
     if(!item.$clones)
@@ -393,7 +387,7 @@ const ForeachResolver=async function(item,extra,bind="this.data"){
     
 };
 
-const ConditionResolver=function(item,bind="this.data"){
+const ConditionResolver=function(item,bind=COMPONENT_DATA_NAME){
     const IF = 0, ELSE = 1, ELSEIF = 2;
     this.result=false;
     const ID = ConditionResolver.stack.length;
@@ -513,9 +507,14 @@ const CALLBACKS = {
             return;
         }
         VariableResolver(item,extra);
-        if(!Components[item.tagName]){
+        if(item.$dependents){
+            for(let i=0;i<item.$dependents.length;i++){
+                VariableResolver(item.$dependents[i],extra);
+            }
+        }
+        if(!item.$isComponent){
             let parent = item.getParentComponent();
-            if(parent)
+            if(parent && parent !== null)
                 VariableResolver(parent,extra);
         }
     },
@@ -553,6 +552,9 @@ const VariableObject=function(value,getCallback,setCallback,item,extra,ignoreDat
 };
 
 const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataGetter=false,ignoreDataSetter=false,triggerForEach=false){
+    if(item.textContent === "Confirm"){
+        debugger;
+    }
     let root = {};
     let pointerRoot = root;
     let copy = {};
@@ -606,17 +608,6 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
         const ref = new VariableObject(object[key],getCallback,setCallback,item,extra,ignoreDataGetter,ignoreDataSetter);
         pointerCopy[key] = ref;
         pointerRoot[key] = ref;
-        /*
-        Object.defineProperty(list, "remove", {
-            enumerable: false, // hide from for...in
-            configurable: false, // prevent further meddling...
-            writable: false, // see above ^
-            value: function () {
-                delete list[arguments[0]];
-                item.$clones[arguments[0]].parentNode.removeChild(item.$clones[arguments[0]]);
-                resolveData(item.data,CALLBACKS.getCallback,()=>{CALLBACKS.setCallback(item,extra);});
-            }
-        });*/
 
         Object.defineProperty(pointerCopy, key, {
             get: function() { 
@@ -626,16 +617,11 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
                 return pointerRoot[key].value;
             },
             set: function(value) {
+                //debugger;
                 if(!pointerRoot[key].$classname){
                     pointerRoot[key] = value;
                 }else{
-                    /*if(isArray(value) || isObject(value)){
-                        pointerRoot[key].value = value;
-                    }else{*/
-                        //resolveData(value,getCallback,setCallback,ignoreDataGetter,ignoreDataSetter);
-                        pointerRoot[key].value = value;
-                        //resolveData(pointerRoot[key].value,getCallback,setCallback,ignoreDataGetter,ignoreDataSetter);
-                    //}
+                    pointerRoot[key].value = value;
                 }
                 if(!ignoreDataSetter)
                     (setCallback)(key,item,extra,triggerForEach);
@@ -644,17 +630,11 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
         });
 
         Object.defineProperty(object, key, {
-            get: function() { 
-                if(!ignoreDataGetter) 
-                    (getCallback)(key,item,extra,triggerForEach);
-                ignoreDataGetter = false;
+            get: function() {
                 return pointerCopy[key];
             },
             set: function(value) {
-                //resolveData(value,getCallback,setCallback,ignoreDataGetter,ignoreDataSetter);
                 pointerCopy[key] = value;
-                if(!ignoreDataSetter)
-                    (setCallback)(key,item,extra,triggerForEach);
                 ignoreDataSetter = false;
             }
         });
@@ -685,6 +665,15 @@ window.Components={
         for(let i=0;i<name.length;i++){
             if(!pointer[name[i]]){
                 pointer[name[i]] = {};
+                if(callbacks !== null && i===name.length-1){
+                    for(let key in callbacks){
+                        if(callbacks[key].hasOwnProperty())
+                            continue;
+                        key = key.trim();
+                        pointer[name[i]][key] = callbacks[key];
+                    }
+                }
+            }else{
                 if(callbacks !== null && i===name.length-1){
                     for(let key in callbacks){
                         if(callbacks[key].hasOwnProperty())
@@ -737,9 +726,9 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                         
                         //this part refers to the "foreach" old pointer, aka the original pointer.
                         if(useOldPointer){
-                            let pointer = item.data;
+                            let p = item.data;
                             (tmp).call(item);
-                            item.data = pointer;
+                            item.data = p;
                         }else{
                             if(item.hasAttribute(":fetch")){
                                 let fetchUrl = item.getAttribute(":fetch");
@@ -755,14 +744,39 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                             }
                             (tmp).call(item);
                         }
-                        return;
+                        item.$isComponent = true;
+                        return true;
                     }catch(e){
                         console.error(e);
-                        return;
+                        item.$isComponent = false;
+                        return false;
                     }
                 }
             }
         }
+        let result = await lookup(Components,keys[keys.length-1]);
+        if(!result){
+            item.$isComponent = false;
+            console.warn("Could not find component ",keys.join("/"));
+        }else{
+            item.$isComponent = true;
+        }
+        return result;
+    };
+
+    let lookup = async function(pointer, key){
+        key = key.toLowerCase();
+        //if(pointer[key]) return await parse(pointer,[key],0);
+        let tmp;
+        for(let c in pointer){
+            if(c.toLocaleLowerCase() === key){
+                return await parse(pointer,[key],0);
+            }
+            tmp = await lookup(pointer[c],key);
+            if(tmp) return true
+        }
+
+        return false;
     };
 
     let getParentComponent = function(){
@@ -773,12 +787,11 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             key = parent.getAttribute(":extends");
         }
         while(true){
-            for ( let c in Components ) {
-                if(c.toLowerCase() === key.toLowerCase()){
-                    return parent;
-                }
+            if(parent.$isComponent){
+                return parent;
             }
             if(parent.parentNode){
+                if(parent.parentNode === document) return null;
                 parent = parent.parentNode;
                 key = parent.tagName;
                 if(parent.hasAttribute(":extends")){
@@ -798,31 +811,59 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         return item.querySelector("*[ref=\""+name+"\"]");
     };
 
-    if(!item.hasAttribute(":prevent-data")){
-        if(item.parentNode && item.parentNode !== null)
-            item.data=item.parentNode.data;
+    item.setData=function(object){
+        for(let key in object){
+            item.data[key] = object[key];
+        }
     }
-
+    item.$isComponent = false;
+    item.$dependents = new Array();
+    item.$dataResolved=false;
+    item.$parent = item.getParentComponent();
     namespace = namespace !== null && namespace !== ""?namespace.split(/[\.\/]/):[];
     item.$namespace = namespace;
+
+
+    if(!item.data)
+        item.data = {};
+    if(item.$parent !== null){
+        item.$parent.$dependents.push(item);
+        item.data.$parent = item.$parent.data;
+    }
+    item.$el = item;
+    
     //debugger;
     let key = [...namespace,item.tagName];
-    await parse(Components,key,0);
+    if(!(await parse(Components,key,0))){
+        //await parse(Components,["_NOT_FOUND"],0)
+    }
     if(item.hasAttribute(":extends")){
         key = [...namespace,item.getAttribute(":extends")];
-        await parse(Components,key,0);
+        if(!(await parse(Components,key,0))){
+            //await parse(Components,["_NOT_FOUND"],0)
+        }
+    }
+    
+
+    if(!item.$dataResolved && item.$isComponent){
+        
+        item.data = resolveData(item.data,CALLBACKS.getCallback,CALLBACKS.setCallback,item.$parent!==null?item.$parent:item,extra);
     }
 
     if(!item.$isClone){
         if(item.$origin)
             item.$origin();
-        item.data = resolveData(item.data,CALLBACKS.getCallback,CALLBACKS.setCallback,item,extra);
+        
+        
     }
+
     await VariableResolver(item,extra);
 
+    if(item.$onReady)
+        item.$onReady();
 };
 
-const VariableResolver=async function(item,extra,bind="this.data"){
+const VariableResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
     let data;
     if(item.$isClone){
         data = new Function("return "+bind).call(item.$originalElement);
@@ -831,7 +872,8 @@ const VariableResolver=async function(item,extra,bind="this.data"){
     }else{
         data = new Function("return "+bind+";").call(item);
     }
-    const REGEX_VALUE = /^\s*[A-z0-9\.]*/g;
+    const REGEX_VALUE = /^\s*[\$A-z0-9\.]*/g;
+    const REGEX_PARENT = /^\$parent\.*/g;
     const SUCCESS = 0, NO_DATA = 1, NO_MATCH = 2;
     let resolve = function(input,callback){
         let matches = [...new Set(input.match(REGEX_VALUE))];
@@ -843,7 +885,7 @@ const VariableResolver=async function(item,extra,bind="this.data"){
             let key = match.trim();
             if(data){
                 try{
-                    let result = new Function("return "+key+";").call(data);
+                    let result = new Function("return "+key+";").call(data);;
                     (callback)(result,SUCCESS,isElement(result));
                 }catch(e){
                     console.error("Could not resolve variable "+key,item,e);
@@ -989,6 +1031,11 @@ const VariableResolver=async function(item,extra,bind="this.data"){
         const observer = new MutationObserver(callback);
         observer.observe(item, config);
     }
+
+    if(item.children > 0) 
+        for(let i = 0;i<item.children.length;i++){
+            await VariableResolver(item.children[i],extra);
+        }
 };
 VariableResolver.stack = new Array();
 
@@ -1000,6 +1047,7 @@ const recursiveParser=async function(target,extra={},log){
     for(i = 0; i < target.children.length;i++){
         children.push(target.children[i]);
     }
+    //debugger;
     for(i = 0; i < children.length;i++){
         let child = children[i];
         switch(child.tagName){
@@ -1052,7 +1100,7 @@ const applyHtml=function(target,data,extra={}){
     //temporary parent element
     //I'm using this to throw in the result data
     //and parse it as child nodes.
-        target.innerHTML = data;
+    target.innerHTML = data;
     return recursiveParser(target,extra);
 };
 const foreachChild=function(children,f){
