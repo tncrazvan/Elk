@@ -117,6 +117,16 @@ const create=function(tag,content,options,extra={},async=false){
                 element.className +=" ";
         }
     }
+
+    if(options)
+        for(let key in options){
+            if(typeof(options[key]) === "object" && key === "style"){
+                element.css(options[key]);
+            }else{
+                element.setAttribute(key,options[key]);
+            }
+        }
+
     if(isset(content) && content !== null){
         if(isElement(content)){
             element.innerHTML = "";
@@ -144,15 +154,6 @@ const create=function(tag,content,options,extra={},async=false){
             element.applyHtml(content,extra)
         }
     }
-
-    if(options)
-        for(let key in options){
-            if(typeof(options[key]) === "object" && key === "style"){
-                element.css(options[key]);
-            }else{
-                element.setAttribute(key,options[key]);
-            }
-        }
         
 
     return element;
@@ -497,6 +498,17 @@ const CLASSNAME = {
 };
 Object.freeze(CLASSNAME);
 
+const exploreElementDependents = function(component,callback){
+    if(component.$dependents){
+        for(let i=0;i<component.$dependents.length;i++){
+            callback(component.$dependents[i]);
+            if(component.$dependents[i].$dependents){
+                exploreElementDependents(component.$dependents[i],callback);
+            }
+        }
+    }
+};
+
 const CALLBACKS = {
     setCallback: function(key,item,extra,triggerForEach){
         if(item.hasAttribute(":foreach") && !triggerForEach){
@@ -507,11 +519,11 @@ const CALLBACKS = {
             return;
         }
         VariableResolver(item,extra);
-        if(item.$dependents){
-            for(let i=0;i<item.$dependents.length;i++){
-                VariableResolver(item.$dependents[i],extra);
-            }
-        }
+        
+        exploreElementDependents(item,target=>{
+            VariableResolver(target,extra);
+        });
+
         if(!item.$isComponent){
             let parent = item.getParentComponent();
             if(parent && parent !== null)
@@ -1261,23 +1273,23 @@ const prependToArray=function(value,array){
     return newArray;
 };
 
-const Url=function(string){
+const url=function(string){
     return "url(\""+string+"\")";
 };
 
-const Percent=function(value){
+const percent=function(value){
     return value+"%";
 };
 
-const Pixel=function(value){
+const pixel=function(value){
     return value+"px";
 };
 
-const Rgb=function(red,green,blue){
+const rgb=function(red,green,blue){
     return new String("rgb("+red+","+green+","+blue+")");
 };
 
-const Rgba=function(red,green,blue,alfa){
+const rgba=function(red,green,blue,alfa){
     return new String("rgba("+red+","+green+","+blue+","+alfa+")");
 };
 
