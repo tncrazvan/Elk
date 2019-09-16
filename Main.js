@@ -666,7 +666,7 @@ window.Components={
                     continue;
                 key = key.trim();
                 if(key.match(/(\$init)|(\$namespace)/)){
-                    console.error("You're trying to override the core method Components."+key+" which is not allowed.");
+                    console.error("You're trying to override the core method ","Components."+key," which is not allowed.");
                     return;
                 }
                 pointer[key] = callbacks[key];
@@ -712,6 +712,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     const REGEX_MATCH_HTTP = /^https?\:\/\/.+/i;
     const REGEX_MATCH_HTTP_WITH_ARROW = /^https?\:\/\/.+(?=\=\>)/i;
     item.$parsed = true;
+
     let namespace = null;
     if(item.parentNode && item.parentNode.hasAttribute("@namespace")){
         namespace = item.parentNode.getAttribute("@namespace").trim();
@@ -725,7 +726,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         else
             namespace += "/"+tmp
     }
-    let parse = async function(pointer,keys,index){
+    let parse = async function(pointer,keys,index,namespace=null){
         if(!keys[index]) return;
         const key = keys[index];
         for (let c in pointer) {
@@ -739,6 +740,8 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                         //this part refers to the "foreach" old pointer, aka the original pointer.
                         if(useOldPointer){
                             let p = item.data;
+                            if(namespace !== null)
+                                item.$namespace=namespace
                             (tmp).call(item);
                             item.data = p;
                         }else{
@@ -754,6 +757,8 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                                     item.data = await REQUEST.json();
                                 }
                             }
+                            if(namespace !== null)
+                                item.$namespace=namespace;
                             (tmp).call(item);
                         }
                         item.$isComponent = true;
@@ -777,15 +782,16 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         return result;
     };
 
-    let lookup = async function(pointer, key){
-        key = key.toLowerCase();
+    let lookup = async function(pointer, originalKey, namespace = []){
+        key = originalKey.toLowerCase();
         //if(pointer[key]) return await parse(pointer,[key],0);
         let tmp;
         for(let c in pointer){
             if(c.toLocaleLowerCase() === key){
-                return await parse(pointer,[key],0);
+                return await parse(pointer,[key],0,namespace);
             }
-            tmp = await lookup(pointer[c],key);
+        
+            tmp = await lookup(pointer[c],key,[...namespace,c]);
             if(tmp) return true
         }
 
@@ -836,7 +842,6 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     namespace = namespace !== null && namespace !== ""?namespace.split(/[\.\/]/):[];
     item.$namespace = namespace;
 
-
     if(!item.data)
         item.data = {};
     if(item.$parent !== null){
@@ -845,7 +850,6 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     }
     item.$el = item;
     
-    //debugger;
     let key = [...namespace,item.tagName];
     await parse(Components,key,0)
     if(item.hasAttribute(":extends")){
@@ -1623,7 +1627,10 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
 Element.prototype.extends=function(componentName){
-    let namespace = componentName.split(/[\.\/]/);
+    let namespace = componentName.trim().split(/[\.\/]/);
+    if(namespace[0] !== "/")
+        namespace = [...this.$namespace,...namespace];
+
     let name = namespace.splice(-1);
     let pointer = Components;
     for(let i=0;i<namespace.length;i++){
