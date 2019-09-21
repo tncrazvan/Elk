@@ -658,7 +658,7 @@ const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataG
 };
 
 window.Components={
-    $namespace: function(name,callbacks = null){
+    $namespace: function(name,callbacks = null,namespace = null){
         let pointer = Components;
         if(name === null){
             for(let key in callbacks){
@@ -704,7 +704,7 @@ window.Components={
         name = namespace.splice(-1);
         let obj = {};
         obj[name] = callback;
-        return Components.$namespace(namespace.length>0?namespace.join("/"):null,obj);
+        return Components.$namespace(namespace.length>0?namespace.join("/"):null,obj,namespace);
     }
 };
 
@@ -849,12 +849,16 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         item.data.$parent = item.$parent.data;
     }
     item.$el = item;
-    
+
     let key = [...namespace,item.tagName];
-    await parse(Components,key,0)
+    item.extends=async function(name){
+        name = name !== null && name !== ""?name.split(/[\.\/]/):[];
+        key = [...namespace,...name];
+        await parse(Components,key,0);
+    };
+    await parse(Components,key,0);
     if(item.hasAttribute(":extends")){
-        key = [...namespace,item.getAttribute(":extends")];
-        await parse(Components,key,0)
+        await item.extends(item.getAttribute(":extends"));
     }
     
 
@@ -1626,8 +1630,8 @@ String.prototype.splice = function(start, delCount, newSubStr) {
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
-Element.prototype.extends=function(componentName){
-    let namespace = componentName.trim().split(/[\.\/]/);
+//Element.prototype.extends=function(componentName){
+    /*let namespace = componentName.trim().split(/[\.\/]/);
     if(namespace[0] !== "/")
         namespace = [...this.$namespace,...namespace];
 
@@ -1642,8 +1646,8 @@ Element.prototype.extends=function(componentName){
         return;
     }
     let extendTmp = pointer[name];
-    (extendTmp).call(this,this);
-};
+    (extendTmp).call(this,this);*/
+//};
 
 Element.prototype.refresh=async function(){
     
