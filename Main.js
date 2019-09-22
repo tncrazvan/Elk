@@ -742,6 +742,21 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                             let p = item.data;
                             if(namespace !== null)
                                 item.$namespace=namespace
+
+                            item.extends=async function(name){
+                                name = name.trim();
+                                name = name !== null && name !== ""?name.split(/[\.\/]/):[];
+                                let key;
+                                
+                                if(name.length > 0 && name[0] === "")
+                                    key = [...name.splice(1)];
+                                else
+                                    key = [...item.$namespace,...name];
+                                await parse(Components,key,0);
+                            };
+                            if(item.hasAttribute(":extends")){
+                                await item.extends(item.getAttribute(":extends"));
+                            }
                             (tmp).call(item);
                             item.data = p;
                         }else{
@@ -759,6 +774,21 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                             }
                             if(namespace !== null)
                                 item.$namespace=namespace;
+
+                            item.extends=async function(name){
+                                name = name.trim();
+                                name = name !== null && name !== ""?name.split(/[\.\/]/):[];
+                                let key;
+                                
+                                if(name.length > 0 && name[0] === "")
+                                    key = [...name.splice(1)];
+                                else
+                                    key = [...item.$namespace,...name];
+                                await parse(Components,key,0);
+                            };
+                            if(item.hasAttribute(":extends")){
+                                await item.extends(item.getAttribute(":extends"));
+                            }
                             (tmp).call(item);
                         }
                         item.$isComponent = true;
@@ -840,6 +870,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     item.$dataResolved=false;
     item.$parent = item.getParentComponent();
     namespace = namespace !== null && namespace !== ""?namespace.split(/[\.\/]/):[];
+
     item.$namespace = namespace;
 
     if(!item.data)
@@ -851,16 +882,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     item.$el = item;
 
     let key = [...namespace,item.tagName];
-    item.extends=async function(name){
-        name = name !== null && name !== ""?name.split(/[\.\/]/):[];
-        key = [...namespace,...name];
-        await parse(Components,key,0);
-    };
     await parse(Components,key,0);
-    if(item.hasAttribute(":extends")){
-        await item.extends(item.getAttribute(":extends"));
-    }
-    
 
     if(!item.$dataResolved && item.$isComponent){
         
