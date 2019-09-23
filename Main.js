@@ -338,8 +338,7 @@ const ForeachResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
             clone.$isClone = true;
             item.$clones[key] = clone;
             clone.$key = key;
-            clone.$dataTargetName = targetName;;
-
+            clone.$dataTargetName = targetName;
             clone.data = list[key];
             clone.$originalElement = item;
 
@@ -564,9 +563,6 @@ const VariableObject=function(value,getCallback,setCallback,item,extra,ignoreDat
 };
 
 const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataGetter=false,ignoreDataSetter=false,triggerForEach=false){
-    if(item.textContent === "Confirm"){
-        debugger;
-    }
     let root = {};
     let pointerRoot = root;
     let copy = {};
@@ -712,7 +708,6 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     const REGEX_MATCH_HTTP = /^https?\:\/\/.+/i;
     const REGEX_MATCH_HTTP_WITH_ARROW = /^https?\:\/\/.+(?=\=\>)/i;
     item.$parsed = true;
-
     let namespace = null;
     if(item.parentNode && item.parentNode.hasAttribute("@namespace")){
         namespace = item.parentNode.getAttribute("@namespace").trim();
@@ -720,19 +715,19 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     if(item.hasAttribute("@namespace")){
         const tmp = item.getAttribute("@namespace").trim();
         if(namespace === null)
-            name = tmp;
+            namespace = tmp;
         else if(tmp[0] === "/")
             namespace = tmp.substr(1);
         else
             namespace += "/"+tmp
     }
-    let parse = async function(pointer,keys,index,namespace=null){
+    let parse = async function(pointer,keys,index,namespace=null,extend=true){
         if(!keys[index]) return;
         const key = keys[index];
         for (let c in pointer) {
             if(c.toLowerCase() === key.toLowerCase()){
                 if(!isFunction(pointer[c])){
-                    return parse(pointer[c],keys,index+1);
+                    return await parse(pointer[c],keys,index+1,namespace,extend);
                 }else{
                     try{
                         let tmp = pointer[c];
@@ -742,21 +737,23 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                             let p = item.data;
                             if(namespace !== null)
                                 item.$namespace=namespace
-
-                            item.extends=async function(name){
-                                name = name.trim();
-                                name = name !== null && name !== ""?name.split(/[\.\/]/):[];
-                                let key;
-                                
-                                if(name.length > 0 && name[0] === "")
-                                    key = [...name.splice(1)];
-                                else
-                                    key = [...item.$namespace,...name];
-                                await parse(Components,key,0);
-                            };
-                            if(item.hasAttribute(":extends")){
-                                await item.extends(item.getAttribute(":extends"));
+                            if(extend){
+                                item.extends=async function(name){
+                                    name = name.trim();
+                                    name = name !== null && name !== ""?name.split(/[\.\/]/):[];
+                                    let key;
+                                    
+                                    if(name.length > 0 && name[0] === "")
+                                        key = [...name.splice(1)];
+                                    else
+                                        key = [...item.$namespace,...name];
+                                    await parse(Components,key,0,null,false);
+                                };
+                                if(item.hasAttribute(":extends")){
+                                    await item.extends(item.getAttribute(":extends"));
+                                }
                             }
+
                             (tmp).call(item);
                             item.data = p;
                         }else{
@@ -775,19 +772,21 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                             if(namespace !== null)
                                 item.$namespace=namespace;
 
-                            item.extends=async function(name){
-                                name = name.trim();
-                                name = name !== null && name !== ""?name.split(/[\.\/]/):[];
-                                let key;
-                                
-                                if(name.length > 0 && name[0] === "")
-                                    key = [...name.splice(1)];
-                                else
-                                    key = [...item.$namespace,...name];
-                                await parse(Components,key,0);
-                            };
-                            if(item.hasAttribute(":extends")){
-                                await item.extends(item.getAttribute(":extends"));
+                            if(extend){
+                                item.extends=async function(name){
+                                    name = name.trim();
+                                    name = name !== null && name !== ""?name.split(/[\.\/]/):[];
+                                    let key;
+                                    
+                                    if(name.length > 0 && name[0] === "")
+                                        key = [...name.splice(1)];
+                                    else
+                                        key = [...item.$namespace,...name];
+                                    await parse(Components,key,0,null,false);
+                                };
+                                if(item.hasAttribute(":extends")){
+                                    await item.extends(item.getAttribute(":extends"));
+                                }
                             }
                             (tmp).call(item);
                         }
@@ -801,6 +800,20 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                 }
             }
         }
+        item.extends=async function(name){
+            name = name.trim();
+            name = name !== null && name !== ""?name.split(/[\.\/]/):[];
+            let key;
+            
+            if(name.length > 0 && name[0] === "")
+                key = [...name.splice(1)];
+            else
+                key = [...item.$namespace,...name];
+            await parse(Components,key,0,null,false);
+        };
+        if(item.hasAttribute(":extends"))
+            await item.extends(item.getAttribute(":extends"));
+
         let result = await lookup(Components,keys[keys.length-1]);
         if(!result){
             item.$isComponent = false;
@@ -813,7 +826,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     };
 
     let lookup = async function(pointer, originalKey, namespace = []){
-        key = originalKey.toLowerCase();
+        let key = originalKey.toLowerCase();
         //if(pointer[key]) return await parse(pointer,[key],0);
         let tmp;
         for(let c in pointer){
@@ -836,7 +849,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             key = parent.getAttribute(":extends");
         }
         while(true){
-            if(parent.$isComponent){
+            if(parent.$isComponent || (parent.$isClone && parent.$originalElement.hasAttribute(":foreach"))){
                 return parent;
             }
             if(parent.parentNode){
@@ -852,9 +865,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         }
     };
 
-    item.getParentComponent=function(){
-        return getParentComponent();
-    };
+    item.getParentComponent=getParentComponent;
 
     item.ref=function(name){
         return item.querySelector("*[ref=\""+name+"\"]");
@@ -865,6 +876,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             item.data[key] = object[key];
         }
     }
+
     item.$isComponent = false;
     item.$dependents = new Array();
     item.$dataResolved=false;
@@ -875,17 +887,17 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
 
     if(!item.data)
         item.data = {};
-    if(item.$parent !== null){
+    if(item.$parent !== null && !item.$isClone){
         item.$parent.$dependents.push(item);
         item.data.$parent = item.$parent.data;
     }
     item.$el = item;
 
     let key = [...namespace,item.tagName];
+
     await parse(Components,key,0);
 
     if(!item.$dataResolved && item.$isComponent){
-        
         item.data = resolveData(item.data,CALLBACKS.getCallback,CALLBACKS.setCallback,item.$parent!==null?item.$parent:item,extra);
     }
 
