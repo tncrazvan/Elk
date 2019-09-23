@@ -1493,7 +1493,7 @@ const include={
         if(typeof list =="string")
         list = [list];
 
-        if(dir === "") dir = "/templates/";
+        if(dir === "") dir = "/Template/";
         if(dir[dir.length-1] !== "/"){
             dir +="/";
         }
