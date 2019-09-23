@@ -1628,7 +1628,7 @@ include.template = include.templates;
 
 
 window.use = new Includer({
-    "templates":"/templates",
+    "templates":"/Template",
     "js":"/js",
     "css":"/css"
 });
