@@ -389,18 +389,24 @@ const ForeachResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
 };
 
 const ConditionResolver=function(item,bind=COMPONENT_DATA_NAME){
+    this.$item=item;
+    this.$master=null;
     const IF = 0, ELSE = 1, ELSEIF = 2;
     this.result=false;
     const ID = ConditionResolver.stack.length;
     const PREV = ID-1 < 0? null: ID-1;
 
-    let data = new Function("return "+bind+";").call(item);
+    if(item.$masterCondition && item.$masterCondition.$item !== item)
+        data = new Function("return "+bind+";").call(item.$masterCondition.$item);
+    else
+        data = new Function("return "+bind+";").call(item);
 
-    if(!item.$originalDisplay) {
+    if(!item.$originalDisplay && item.$originalDisplay !== "") {
         item.$originalDisplay = getComputedStyle(item, null).display;
     }
 
     if(item.hasAttribute(":if")){
+        item.$masterCondition=this;
         let result = "";
         let statement = item.getAttribute(":if");
         if(statement.trim() !== ""){
@@ -412,7 +418,15 @@ const ConditionResolver=function(item,bind=COMPONENT_DATA_NAME){
                     item.style.display = "none";
                 }
                 this.result=result;
-                ConditionResolver.stack[ID] = this;
+                let exists = false;
+                for(let i=0, len = ConditionResolver.stack.length; i<len;i++){
+                    if(ConditionResolver.stack[i].$item == item){
+                        exists = true;
+                        break;
+                    }
+                }
+                if(!exists)
+                    ConditionResolver.stack[ID] = this;
                 this.type = IF;
             }catch(e){
                 console.error(":if statement could not be parsed ",item);
@@ -422,7 +436,12 @@ const ConditionResolver=function(item,bind=COMPONENT_DATA_NAME){
             console.warn(":if statement does not contain a condition in ",item);
         }
     }else if(item.hasAttribute(":elseif") ){
-        if(PREV !== null && ConditionResolver.stack[PREV].type === IF){
+        if(PREV !== null && (ConditionResolver.stack[PREV].type === IF || ConditionResolver.stack[PREV].type === ELSEIF)){
+            if(ConditionResolver.stack[PREV].type === IF){
+                item.$masterCondition = ConditionResolver.stack[PREV];
+            }else if(ConditionResolver.stack[PREV].type === ELSEIF){
+                item.$masterCondition = ConditionResolver.stack[PREV].$masterCondition;
+            }
             if(ConditionResolver.stack[PREV].result){
                 item.style.display = "none";
             }else{
@@ -430,7 +449,6 @@ const ConditionResolver=function(item,bind=COMPONENT_DATA_NAME){
                 let statement = item.getAttribute(":elseif");
                 if(statement.trim() !== ""){
                     try{
-                        statement = statement === ''?"this":["this",statement].join(".");
                         result = new Function("return "+statement+";").call(data);
                         if(result){
                             item.style.display = item.$originalDisplay;
@@ -451,23 +469,41 @@ const ConditionResolver=function(item,bind=COMPONENT_DATA_NAME){
             item.style.display = "none";
             console.warn(":elseif statement must follow and :if statement. No :if statement found.",item);
         }
-        ConditionResolver.stack[ID] = this;
+        let exists = false;
+        for(let i=0, len = ConditionResolver.stack.length; i<len;i++){
+            if(ConditionResolver.stack[i].$item == item){
+                exists = true;
+                break;
+            }
+        }
+        if(!exists)
+            ConditionResolver.stack[ID] = this;
         this.type = ELSEIF;
     }else if(item.hasAttribute(":else")){
-        if(PREV !== null && (
-            ConditionResolver.stack[PREV].type === IF ||
-            ConditionResolver.stack[PREV].type === ELSEIF
-            )){
-                if(ConditionResolver.stack[PREV].result && item.parentNode && item.parentNode !== null){
-                    item.$oldParentNode = item.parentNode;
-                    item.style.display = "none";
-                }else if(item.$oldParentNode){
-                    item.style.display = item.$originalDisplay;
-                }
-            }else if(item.parentNode && item.parentNode !== null){
-                item.style.display = "none";
+        if(PREV !== null && (ConditionResolver.stack[PREV].type === IF || ConditionResolver.stack[PREV].type === ELSEIF)){
+            if(ConditionResolver.stack[PREV].type === IF){
+                item.$masterCondition = ConditionResolver.stack[PREV];
+            }else if(ConditionResolver.stack[PREV].type === ELSEIF){
+                item.$masterCondition = ConditionResolver.stack[PREV].$master;
             }
-        ConditionResolver.stack[ID] = this;
+            if(ConditionResolver.stack[PREV].result && item.parentNode && item.parentNode !== null){
+                item.$oldParentNode = item.parentNode;
+                item.style.display = "none";
+            }else if(item.$oldParentNode){
+                item.style.display = item.$originalDisplay;
+            }
+        }else if(item.parentNode && item.parentNode !== null){
+            item.style.display = "none";
+        }
+        let exists = false;
+        for(let i=0, len = ConditionResolver.stack.length; i<len;i++){
+            if(ConditionResolver.stack[i].$item == item){
+                exists = true;
+                break;
+            }
+        }
+        if(!exists)
+            ConditionResolver.stack[ID] = this;
         this.type = ELSE;
     }
 };
@@ -511,6 +547,7 @@ const exploreElementDependents = function(component,callback){
 
 const CALLBACKS = {
     setCallback: function(key,item,extra,triggerForEach){
+        debugger;
         if(item.hasAttribute(":foreach") && !triggerForEach){
             for(let localKey in item.$clones){
                 if(!item.$clones.hasOwnProperty(localKey)) continue;
@@ -888,18 +925,23 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         
         item.data = resolveData(item.data,CALLBACKS.getCallback,CALLBACKS.setCallback,item.$parent!==null?item.$parent:item,extra);
     }
-
-    if(!item.$isClone){
+    if(item.hasAttribute(":if")){
         if(item.$origin)
             item.$origin();
-        
-        
+    }else if(!item.$isClone && !item.hasAttribute(":else") && !item.hasAttribute(":elseif")){
+        if(item.$origin)
+            item.$origin();
     }
 
     await VariableResolver(item,extra);
 
-    if(item.$onReady)
+    if(item.hasAttribute(":else") || item.hasAttribute(":elseif")){
+        item.$masterCondition.$item.$dependents.push(item);
+    }
+
+    if(item.$onReady){
         item.$onReady();
+    }
 };
 
 const VariableResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
@@ -909,7 +951,10 @@ const VariableResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
         data = new Function("return "+item.$dataTargetName+"["+item.$key+"];").call(data);
         if(data === undefined && item.parentNode) item.parentNode.removeChild(item);
     }else{
-        data = new Function("return "+bind+";").call(item);
+        if(item.$masterCondition && item.$masterCondition.$item !== item)
+            data = new Function("return "+bind+";").call(item.$masterCondition.$item);
+        else
+            data = new Function("return "+bind+";").call(item);
     }
     const REGEX_VALUE = /^\s*[\$A-z0-9\.]*/g;
     const REGEX_PARENT = /^\$parent\.*/g;
@@ -1493,7 +1538,7 @@ const include={
         if(typeof list =="string")
         list = [list];
 
-        if(dir === "") dir = "/templates/";
+        if(dir === "") dir = "/Template/";
         if(dir[dir.length-1] !== "/"){
             dir +="/";
         }
@@ -1628,7 +1673,7 @@ include.template = include.templates;
 
 
 window.use = new Includer({
-    "templates":"/templates",
+    "templates":"/Template",
     "js":"/js",
     "css":"/css"
 });
