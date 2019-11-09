@@ -440,7 +440,7 @@ const ConditionResolver=function(item,bind=COMPONENT_DATA_NAME){
             if(ConditionResolver.stack[PREV].type === IF){
                 item.$masterCondition = ConditionResolver.stack[PREV];
             }else if(ConditionResolver.stack[PREV].type === ELSEIF){
-                item.$masterCondition = ConditionResolver.stack[PREV].$masterCondition;
+                item.$masterCondition = ConditionResolver.stack[PREV].$item.$masterCondition;
             }
             if(ConditionResolver.stack[PREV].result){
                 item.style.display = "none";
@@ -484,7 +484,7 @@ const ConditionResolver=function(item,bind=COMPONENT_DATA_NAME){
             if(ConditionResolver.stack[PREV].type === IF){
                 item.$masterCondition = ConditionResolver.stack[PREV];
             }else if(ConditionResolver.stack[PREV].type === ELSEIF){
-                item.$masterCondition = ConditionResolver.stack[PREV].$master;
+                item.$masterCondition = ConditionResolver.stack[PREV].$item.$master;
             }
             if(ConditionResolver.stack[PREV].result && item.parentNode && item.parentNode !== null){
                 item.$oldParentNode = item.parentNode;
