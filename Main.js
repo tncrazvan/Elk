@@ -547,7 +547,6 @@ const exploreElementDependents = function(component,callback){
 
 const CALLBACKS = {
     setCallback: function(key,item,extra,triggerForEach){
-        debugger;
         if(item.hasAttribute(":foreach") && !triggerForEach){
             for(let localKey in item.$clones){
                 if(!item.$clones.hasOwnProperty(localKey)) continue;
@@ -601,9 +600,6 @@ const VariableObject=function(value,getCallback,setCallback,item,extra,ignoreDat
 };
 
 const resolveData=function(object,getCallback,setCallback,item,extra,ignoreDataGetter=false,ignoreDataSetter=false,triggerForEach=false){
-    if(item.textContent === "Confirm"){
-        debugger;
-    }
     let root = {};
     let pointerRoot = root;
     let copy = {};
