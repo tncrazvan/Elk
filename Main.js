@@ -733,7 +733,7 @@ window.Components={
         return;
     },
     $init: function(name,callback=null){
-        let namespace = name.split(/[\.\/]/);
+        let namespace = name.trim().replace(/^\s*\//,"").split(/[\.\/]/);
         name = namespace.splice(-1);
         let obj = {};
         obj[name] = callback;
@@ -812,7 +812,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                                 name = name.trim();
                                 name = name !== null && name !== ""?name.split(/[\.\/]/):[];
                                 let key;
-                                
+
                                 if(name.length > 0 && name[0] === "")
                                     key = [...name.splice(1)];
                                 else
