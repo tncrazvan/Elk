@@ -1732,7 +1732,7 @@ Element.prototype.css=function(attributes={}){
     return css(this,attributes);
 };
 
-Element.prototype.run=function(attributes={}){
+Element.prototype.run=function(f){
     (f)(this);
     return element;
 };
