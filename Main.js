@@ -117,7 +117,7 @@ const create=function(tag,content,options,extra={},async=false){
                 element.className +=" ";
         }
     }
-
+    
     if(options)
         for(let key in options){
             if(typeof(options[key]) === "object" && key === "style"){
@@ -1730,6 +1730,11 @@ Element.prototype.removeClassNames=function(classnames){
 
 Element.prototype.css=function(attributes={}){
     return css(this,attributes);
+};
+
+Element.prototype.run=function(attributes={}){
+    (f)(this);
+    return element;
 };
 
 Element.prototype.template=async function(templateName,data=null,stateUrl=null,version=0,apply=true){
