@@ -1734,7 +1734,7 @@ Element.prototype.css=function(attributes={}){
 
 Element.prototype.run=function(f){
     (f)(this);
-    return element;
+    return this;
 };
 
 Element.prototype.template=async function(templateName,data=null,stateUrl=null,version=0,apply=true){
