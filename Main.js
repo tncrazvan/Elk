@@ -18,7 +18,6 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
 const state=function(...url){
     let joined = url.join("/");
     history.pushState({},'',joined);
@@ -1062,8 +1061,22 @@ const VariableResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
         item.addEventListener("change",()=>{
             if(item.$ignoreDataSetter) return;
             item.$ignoreDataSetter = true;
-            new Function('value',item.getAttribute(':value')+"= value;").call(item.data,item.value);
+            let script = item.getAttribute(':value');
+            new Function('value',script+"= value;").call(item.data,item.value);
         });
+
+        let tmp = item.value;
+
+        item.setValue=function(value){
+            item.value = value;
+            if(item.$ignoreDataSetter) return;
+            item.$ignoreDataSetter = true;
+            let script = item.getAttribute(':value');
+            new Function('value',script+"= value;").call(item.data,item.value);
+        };
+        item.getValue=function(){
+            return item.value;
+        };
     }
 
     if(item.$originalElement){
@@ -1711,10 +1724,6 @@ String.prototype.capitalize = function() {
     let extendTmp = pointer[name];
     (extendTmp).call(this,this);*/
 //};
-
-Element.prototype.refresh=async function(){
-    
-};
 
 Element.prototype.addClassNames=function(classnames){
     classnames.forEach(classname=>{
