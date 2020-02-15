@@ -741,6 +741,8 @@ window.Components={
 };
 
 const ComponentResolver=async function(item,extra,useOldPointer=false){
+    /*debugger;
+    console.log(item);*/
     const REGEX_MATCH_HTTP = /^https?\:\/\/.+/i;
     const REGEX_MATCH_HTTP_WITH_ARROW = /^https?\:\/\/.+(?=\=\>)/i;
     item.$parsed = true;
@@ -752,18 +754,28 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     if(item.hasAttribute("@namespace")){
         const tmp = item.getAttribute("@namespace").trim();
         if(namespace === null)
-            name = tmp;
+            namespace = tmp;
         else if(tmp[0] === "/")
             namespace = tmp.substr(1);
         else
             namespace += "/"+tmp
     }
+
+    let i = 0;
+
     let parse = async function(pointer,keys,index,namespace=null){
+        /*if(i === 0){
+            debugger;
+        }
+        if(i >= 500){
+            debugger;
+        }*/
         if(!keys[index]) return;
         const key = keys[index];
         for (let c in pointer) {
             if(c.toLowerCase() === key.toLowerCase()){
                 if(!isFunction(pointer[c])){
+                    console.log(++i,keys);
                     return parse(pointer[c],keys,index+1);
                 }else{
                     try{
@@ -833,7 +845,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                 }
             }
         }
-        let result = await lookup(Components,keys[keys.length-1]);
+        /*let result = await lookup(Components,keys[keys.length-1]);
         if(!result){
             item.$isComponent = false;
             if(item.hasAttribute("@follow"))
@@ -841,10 +853,10 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         }else{
             item.$isComponent = true;
         }
-        return result;
+        return result;*/
     };
 
-    let lookup = async function(pointer, originalKey, namespace = []){
+    /*let lookup = async function(pointer, originalKey, namespace = []){
         key = originalKey.toLowerCase();
         //if(pointer[key]) return await parse(pointer,[key],0);
         let tmp;
@@ -858,7 +870,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         }
 
         return false;
-    };
+    };*/
 
     let getParentComponent = function(){
         let parent = item.parentNode;
@@ -1706,8 +1718,8 @@ String.prototype.splice = function(start, delCount, newSubStr) {
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
-//Element.prototype.extends=function(componentName){
-    /*let namespace = componentName.trim().split(/[\.\/]/);
+/*Element.prototype.extends=function(componentName){
+    let namespace = componentName.trim().split(/[\.\/]/);
     if(namespace[0] !== "/")
         namespace = [...this.$namespace,...namespace];
 
@@ -1722,8 +1734,8 @@ String.prototype.capitalize = function() {
         return;
     }
     let extendTmp = pointer[name];
-    (extendTmp).call(this,this);*/
-//};
+    (extendTmp).call(this,this);
+};*/
 
 Element.prototype.addClassNames=function(classnames){
     classnames.forEach(classname=>{
