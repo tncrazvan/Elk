@@ -879,9 +879,11 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             item.data = await REQUEST.json();
         }
     }
-    
+    /*console.log(item);
+    debugger;*/
     if(extendsArray !== null){
-        extendsArray = [...namespace,...extendsArray];
+        if(extendsArray.length > 0 && extendsArray[0] !== "")
+            extendsArray = [...namespace,...extendsArray];
         let tmp = new Array();
         for(let i = 0; i< extendsArray.length; i++){
             if(extendsArray[i].trim() !== "")
