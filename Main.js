@@ -741,8 +741,6 @@ window.Components={
 };
 
 const ComponentResolver=async function(item,extra,useOldPointer=false){
-    /*debugger;
-    console.log(item);*/
     const REGEX_MATCH_HTTP = /^https?\:\/\/.+/i;
     const REGEX_MATCH_HTTP_WITH_ARROW = /^https?\:\/\/.+(?=\=\>)/i;
     item.$parsed = true;
@@ -761,21 +759,13 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             namespace += "/"+tmp
     }
 
-    let i = 0;
-
     let parse = async function(pointer,keys,index,namespace=null){
-        /*if(i === 0){
-            debugger;
-        }
-        if(i >= 500){
-            debugger;
-        }*/
         if(!keys[index]) return;
         const key = keys[index];
+
         for (let c in pointer) {
             if(c.toLowerCase() === key.toLowerCase()){
                 if(!isFunction(pointer[c])){
-                    console.log(++i,keys);
                     return parse(pointer[c],keys,index+1);
                 }else{
                     try{
@@ -785,54 +775,14 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                         if(useOldPointer){
                             let p = item.data;
                             if(namespace !== null)
-                                item.$namespace=namespace
+                                item.$namespace=namespace;
 
-                            item.extends=async function(name){
-                                name = name.trim();
-                                name = name !== null && name !== ""?name.split(/[\.\/]/):[];
-                                let key;
-                                
-                                if(name.length > 0 && name[0] === "")
-                                    key = [...name.splice(1)];
-                                else
-                                    key = [...item.$namespace,...name];
-                                await parse(Components,key,0);
-                            };
-                            if(item.hasAttribute(":extends")){
-                                await item.extends(item.getAttribute(":extends"));
-                            }
                             (tmp).call(item);
                             item.data = p;
                         }else{
-                            if(item.hasAttribute(":fetch")){
-                                let fetchUrl = item.getAttribute(":fetch");
-                                if(fetchUrl.match(REGEX_MATCH_HTTP_WITH_ARROW)){
-                                    const SPLIT = fetchUrl.split(/\=\>/i);
-                                    const REQUEST = await fetch(SPLIT[0].trim());
-                                    const target = SPLIT[1].trim();
-                                    new Function("response",target+"=response;").call(item.data,await REQUEST.json());
-                                }else if(fetchUrl.match(REGEX_MATCH_HTTP)){
-                                    const REQUEST = await fetch(fetchUrl);
-                                    item.data = await REQUEST.json();
-                                }
-                            }
                             if(namespace !== null)
                                 item.$namespace=namespace;
 
-                            item.extends=async function(name){
-                                name = name.trim();
-                                name = name !== null && name !== ""?name.split(/[\.\/]/):[];
-                                let key;
-
-                                if(name.length > 0 && name[0] === "")
-                                    key = [...name.splice(1)];
-                                else
-                                    key = [...item.$namespace,...name];
-                                await parse(Components,key,0);
-                            };
-                            if(item.hasAttribute(":extends")){
-                                await item.extends(item.getAttribute(":extends"));
-                            }
                             (tmp).call(item);
                         }
                         item.$isComponent = true;
@@ -845,32 +795,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
                 }
             }
         }
-        /*let result = await lookup(Components,keys[keys.length-1]);
-        if(!result){
-            item.$isComponent = false;
-            if(item.hasAttribute("@follow"))
-                console.warn("Component ",keys.join("/")," seems to have no definition.");
-        }else{
-            item.$isComponent = true;
-        }
-        return result;*/
     };
-
-    /*let lookup = async function(pointer, originalKey, namespace = []){
-        key = originalKey.toLowerCase();
-        //if(pointer[key]) return await parse(pointer,[key],0);
-        let tmp;
-        for(let c in pointer){
-            if(c.toLocaleLowerCase() === key){
-                return await parse(pointer,[key],0,namespace);
-            }
-        
-            tmp = await lookup(pointer[c],key,[...namespace,c]);
-            if(tmp) return true
-        }
-
-        return false;
-    };*/
 
     let getParentComponent = function(){
         let parent = item.parentNode;
@@ -914,7 +839,9 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     item.$dataResolved=false;
     item.$parent = item.getParentComponent();
     namespace = namespace !== null && namespace !== ""?namespace.split(/[\.\/]/):[];
-
+    let extendsArray = null;
+    if(item.hasAttribute(":extends"))
+    extendsArray = item.getAttribute(":extends").split("/");
     item.$namespace = namespace;
 
     if(!item.data)
@@ -926,7 +853,39 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     item.$el = item;
 
     let key = [...namespace,item.tagName];
+
+    if(!item.extends)
+        item.extends=async function(name){
+            name = name.trim();
+            name = name !== null && name !== ""?name.split(/[\.\/]/):[];
+            let key;
+
+            if(name.length > 0 && name[0] === "")
+                key = [...name.splice(1)];
+            else
+                key = [...item.$namespace,...name];
+            await parse(Components,key,0);
+        };
+
+    if(item.hasAttribute(":fetch")){
+        let fetchUrl = item.getAttribute(":fetch");
+        if(fetchUrl.match(REGEX_MATCH_HTTP_WITH_ARROW)){
+            const SPLIT = fetchUrl.split(/\=\>/i);
+            const REQUEST = await fetch(SPLIT[0].trim());
+            const target = SPLIT[1].trim();
+            new Function("response",target+"=response;").call(item.data,await REQUEST.json());
+        }else if(fetchUrl.match(REGEX_MATCH_HTTP)){
+            const REQUEST = await fetch(fetchUrl);
+            item.data = await REQUEST.json();
+        }
+    }
+    
+    if(extendsArray !== null){
+        extendsArray = [...namespace,...extendsArray];
+        await parse(Components,extendsArray,0);
+    }
     await parse(Components,key,0);
+
 
     if(!item.$dataResolved && item.$isComponent){
         
@@ -1718,24 +1677,6 @@ String.prototype.splice = function(start, delCount, newSubStr) {
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
-/*Element.prototype.extends=function(componentName){
-    let namespace = componentName.trim().split(/[\.\/]/);
-    if(namespace[0] !== "/")
-        namespace = [...this.$namespace,...namespace];
-
-    let name = namespace.splice(-1);
-    let pointer = Components;
-    for(let i=0;i<namespace.length;i++){
-        pointer = pointer[namespace[i]];
-    }
-
-    if(!pointer[name]){
-        console.error("Component ",[...namespace,name].join("/")," not found.");
-        return;
-    }
-    let extendTmp = pointer[name];
-    (extendTmp).call(this,this);
-};*/
 
 Element.prototype.addClassNames=function(classnames){
     classnames.forEach(classname=>{
