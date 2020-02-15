@@ -1062,7 +1062,7 @@ const VariableResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
         };
     }
 
-    if(item.$originalElement){
+    if(item.$originalElement && !item.$observer){
         const config = {subtree: true,childList: true};
         const callback = function(mutationsList, observer) {
             for(let mutation of mutationsList) {
@@ -1077,9 +1077,10 @@ const VariableResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
             }
         };
         const observer = new MutationObserver(callback);
+        item.$observer = observer;
         if(item.$originalParent && item.$originalParent.parentNode)
             observer.observe(item.$originalParent.parentNode, config);
-    }else{
+    }else if(!item.$observer){
         const config = {attributes: true, subtree: true, characterData: true};
         const callback = function(mutationsList, observer) {
             for(let mutation of mutationsList) {
@@ -1105,6 +1106,7 @@ const VariableResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
         };
 
         const observer = new MutationObserver(callback);
+        item.$observer = observer;
         observer.observe(item, config);
     }
 
