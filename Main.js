@@ -882,9 +882,19 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     
     if(extendsArray !== null){
         extendsArray = [...namespace,...extendsArray];
-        await parse(Components,extendsArray,0);
+        let tmp = new Array();
+        for(let i = 0; i< extendsArray.length; i++){
+            if(extendsArray[i].trim() !== "")
+                tmp.push(extendsArray[i]);
+        }
+        await parse(Components,tmp,0);
     }
-    await parse(Components,key,0);
+    let tmp = new Array();
+    for(let i = 0; i< key.length; i++){
+        if(key[i].trim() !== "")
+            tmp.push(key[i]);
+    }
+    await parse(Components,tmp,0);
 
 
     if(!item.$dataResolved && item.$isComponent){
