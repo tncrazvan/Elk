@@ -1588,8 +1588,8 @@ const include={
 
                     let text;
                     if(!include.cache.css[file]){
-                        if(file.charAt(0)===":"){
-                            text = await fetch(file.replace(/\:/g,""));
+                        if(file.match(/(^https?)|(^\/\/)/)){
+                            text = await fetch(file);
                         }else{
                             text = await fetch(dir+file+".css?v="+version);
                         }
