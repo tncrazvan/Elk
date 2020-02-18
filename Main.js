@@ -72,31 +72,62 @@ const ObjectInspector=function(object,callback=null){
     }
 }
 
-const LinkedList = function(){
-    this.head = null;
-    this.push=function(element){
-        element.previous = this.head;
-        if(this.previous === null){
-            this.tail = element;
-        }
-        this.head = element;
-    };
-
-    this.pop=function(){
-        if(this.head !== null){
-            const result = this.head;
-            this.head = this.head.previous;
-            return result;
-        }
-        return null;
-    };
-};
-
 const LinkedListElement = function(value){
-    this.previous = null;
-    this.next = null;
-    this.value = value;
-};
+    let data = value;
+    let next = null;
+    this.getData=function(){
+        return data;
+    };
+    this.getNext=function(){
+        return next;
+    };
+    this.setNext = function(n){
+        next = n;
+    }
+}
+
+const LinkedList = function(){
+    let head = null;
+    let tail = null;
+    let length = 0;
+    this.getFirst=function(){
+        return head;
+    };
+    this.getLast=function(){
+        return tail;
+    };
+    this.getLength=function(){
+        return length;
+    };
+
+    this.add=(lle)=>{
+        if(head === null)
+            head = lle;
+        else{
+            tail.setNext(lle);
+        }
+        tail = lle;
+        length++;
+    }
+    this.remove=(lle)=>{
+        let item = head;
+        let prev = null;
+        while(item !== null){
+            if(item !== lle) {
+                prev = item;
+                item = item.getNext();
+                continue;
+            }
+
+            if(prev === null){
+                head == null;
+            }else{
+                prev.setNext(null)
+            }
+            length--;
+        }
+    };
+}
 
 const create=function(tag,content,options,extra={},async=false){
     let ts;
@@ -249,16 +280,16 @@ const parseElement=async function(item,extra={}){
                 await use.js(item.getAttribute("js"));
             }
         }
-        if(item.mounted){
-            await item.mounted();
-        }else if(window[item.hasAttribute("mounted")]){
-            await (window[item.getAttribute("mounted")])();
+        if(item.$onMount){
+            await item.$onMount();
+        }else if(window[item.hasAttribute("$onMount")]){
+            await (window[item.getAttribute("$onMount")])();
         }
     }
-    if(item.onload){
-        await item.onload();
-    }else if(window[item.hasAttribute("onload")]){
-        await (window[item.getAttribute("onload")])();
+    if(item.$onLoad){
+        await item.$onLoad();
+    }else if(window[item.hasAttribute("$onLoad")]){
+        await (window[item.getAttribute("$onLoad")])();
     }
 };
 const uuid=function(){
