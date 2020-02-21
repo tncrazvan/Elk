@@ -18,6 +18,61 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+const extend = async function(item,name,useOldPointer=false){
+    name = name.trim();
+    name = name !== null && name !== ""?name.split(/[\.\/]/):[];
+    let key;
+
+    if(name.length > 0 && name[0] === "")
+        key = [...name.splice(1)];
+    else
+        key = [...item.$namespace,...name];
+    await parseComponent(item,Components,key,0,useOldPointer);
+};
+
+const parseComponent = async function(item,pointer,keys,index,namespace=null,useOldPointer){
+    if(!item.extends)
+        item.extends=async function(name){
+            await extend(item,name);
+        };
+    if(!keys[index]) return;
+    const key = keys[index];
+
+    for (let c in pointer) {
+        if(c.toLowerCase() === key.toLowerCase()){
+            if(!isFunction(pointer[c])){
+                return parseComponent(item,pointer[c],keys,index+1,null,useOldPointer);
+            }else{
+                try{
+                    let tmp = pointer[c];
+                    
+                    //this part refers to the "foreach" old pointer, aka the original pointer.
+                    if(useOldPointer){
+                        let p = item.data;
+                        if(namespace !== null)
+                            item.$namespace=namespace;
+
+                        (tmp).call(item);
+                        item.data = p;
+                    }else{
+                        if(namespace !== null)
+                            item.$namespace=namespace;
+
+                        (tmp).call(item);
+                    }
+                    item.$isComponent = true;
+                    return true;
+                }catch(e){
+                    console.error(e);
+                    item.$isComponent = false;
+                    return false;
+                }
+            }
+        }
+    }
+};
+
+
 const state=function(...url){
     let joined = url.join("/");
     history.pushState({},'',joined);
@@ -790,44 +845,6 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             namespace += "/"+tmp
     }
 
-    let parse = async function(pointer,keys,index,namespace=null){
-        if(!keys[index]) return;
-        const key = keys[index];
-
-        for (let c in pointer) {
-            if(c.toLowerCase() === key.toLowerCase()){
-                if(!isFunction(pointer[c])){
-                    return parse(pointer[c],keys,index+1);
-                }else{
-                    try{
-                        let tmp = pointer[c];
-                        
-                        //this part refers to the "foreach" old pointer, aka the original pointer.
-                        if(useOldPointer){
-                            let p = item.data;
-                            if(namespace !== null)
-                                item.$namespace=namespace;
-
-                            (tmp).call(item);
-                            item.data = p;
-                        }else{
-                            if(namespace !== null)
-                                item.$namespace=namespace;
-
-                            (tmp).call(item);
-                        }
-                        item.$isComponent = true;
-                        return true;
-                    }catch(e){
-                        console.error(e);
-                        item.$isComponent = false;
-                        return false;
-                    }
-                }
-            }
-        }
-    };
-
     let getParentComponent = function(){
         let parent = item.parentNode;
         if(parent === null) return null;
@@ -885,19 +902,6 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
 
     let key = [...namespace,item.tagName];
 
-    if(!item.extends)
-        item.extends=async function(name){
-            name = name.trim();
-            name = name !== null && name !== ""?name.split(/[\.\/]/):[];
-            let key;
-
-            if(name.length > 0 && name[0] === "")
-                key = [...name.splice(1)];
-            else
-                key = [...item.$namespace,...name];
-            await parse(Components,key,0);
-        };
-
     if(item.hasAttribute(":fetch")){
         let fetchUrl = item.getAttribute(":fetch");
         if(fetchUrl.match(REGEX_MATCH_HTTP_WITH_ARROW)){
@@ -920,14 +924,14 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             if(extendsArray[i].trim() !== "")
                 tmp.push(extendsArray[i]);
         }
-        await parse(Components,tmp,0);
+        await parseComponent(item,Components,tmp,0,null,useOldPointer);
     }
     let tmp = new Array();
     for(let i = 0; i< key.length; i++){
         if(key[i].trim() !== "")
             tmp.push(key[i]);
     }
-    await parse(Components,tmp,0);
+    await parseComponent(item,Components,tmp,0,null,useOldPointer);
 
 
     if(!item.$dataResolved && item.$isComponent){
