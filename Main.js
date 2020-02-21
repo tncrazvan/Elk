@@ -887,11 +887,6 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
         item.data.$parent = item.$parent.data;
     }
 
-    if(item.hasAttribute("asd") || item.hasAttribute("qwerty") || item.hasAttribute("zxc")){
-        console.log(item);
-        debugger;
-    }
-
     item.$el = item;
 
     let key = [...namespace,item.tagName];
