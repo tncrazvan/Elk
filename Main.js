@@ -101,8 +101,9 @@ const isempty=function(object){
     }
 };
 const isFunction=function(functionToCheck) {
-    let getType = {};
-    return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+    const getType = {};
+    const t = getType.toString.call(functionToCheck);
+    return functionToCheck && (t === '[object Function]' || t === '[object AsyncFunction]');
 };
 const isElement=function(obj) {
     try {
@@ -608,8 +609,8 @@ const inherit = function(item,map){
 
         rightKey = rightKey.replace(/\:\s*/,"");
         rightKey = rightKey === ''?"parent":["parent",rightKey].join(".");
-
         let tmp = new Function('parent','item',leftKey+'='+rightKey+';');
+        console.log(parent.data,item.data);
         tmp(parent,item);
     });
 };
@@ -914,6 +915,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             item.data = await REQUEST.json();
         }
     }
+
     /*console.log(item);
     debugger;*/
     if(extendsArray !== null){
@@ -950,6 +952,10 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
 
     if(item.hasAttribute(":else") || item.hasAttribute(":elseif")){
         item.$masterCondition.$item.$dependents.push(item);
+    }
+
+    if(item.hasAttribute(":inherit") && item.$parent && item.$parent !== null){
+        item.data.$parent = item.$parent;
     }
 
     if(item.$onReady){
@@ -1010,23 +1016,24 @@ const VariableResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
             };
         }else{
             switch(attributes[i].name){
+                case ":inherit":
+                continue;
                 case ":extends":
                 case "@namespace":
                 case ":fetch":
-                    continue;
-                break;
+                continue;
                 case ":if":
                 case ":elseif":
                 case ":else":
                         new ConditionResolver(item);
-                    continue;
+                continue;
                 case ":foreach":
                         await ForeachResolver(item,extra);
-                    continue;
+                continue;
                 case ":sortby":
                 case ":desc":
                     //reserved attributes
-                    continue;
+                continue;
                 case ":html":
                     callback = function(result,state,isElement){
                         if(state === SUCCESS){
