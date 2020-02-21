@@ -185,7 +185,7 @@ const LinkedList = function(){
     };
 }
 
-const create=function(tag,content,options,extra={},async=false){
+const create=function(tag,content,options,extra={},async=false,$parent=null){
     let ts;
     tag = tag.split(".");
     let element;
@@ -203,6 +203,9 @@ const create=function(tag,content,options,extra={},async=false){
                 element.className +=" ";
         }
     }
+
+    if($parent !== null)
+        $parent.appendChild(element);
     
     if(options)
         for(let key in options){
@@ -870,6 +873,9 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             item.data[key] = object[key];
         }
     }
+    item.create=(tag,content,options,async)=>{
+        return create(tag,content,options,{},async,item);
+    };
     item.$isComponent = false;
     item.$dependents = new Array();
     item.$dataResolved=false;
@@ -886,7 +892,12 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     if(item.$parent !== null){
         item.data.$parent = item.$parent.data;
     }
-
+/*
+    if(item.hasAttribute("asd")){
+        console.log(item);
+        debugger;
+    }
+*/
     item.$el = item;
 
     let key = [...namespace,item.tagName];
