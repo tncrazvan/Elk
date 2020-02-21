@@ -41,7 +41,7 @@ const parseComponent = async function(item,pointer,keys,index,namespace=null,use
     for (let c in pointer) {
         if(c.toLowerCase() === key.toLowerCase()){
             if(!isFunction(pointer[c])){
-                return parseComponent(item,pointer[c],keys,index+1,null,useOldPointer);
+                return await parseComponent(item,pointer[c],keys,index+1,null,useOldPointer);
             }else{
                 try{
                     let tmp = pointer[c];
@@ -52,13 +52,13 @@ const parseComponent = async function(item,pointer,keys,index,namespace=null,use
                         if(namespace !== null)
                             item.$namespace=namespace;
 
-                        (tmp).call(item);
+                        await (tmp).call(item);
                         item.data = p;
                     }else{
                         if(namespace !== null)
                             item.$namespace=namespace;
 
-                        (tmp).call(item);
+                        await (tmp).call(item);
                     }
                     item.$isComponent = true;
                     return true;
@@ -103,7 +103,7 @@ const isempty=function(object){
 const isFunction=function(functionToCheck) {
     const getType = {};
     const t = getType.toString.call(functionToCheck);
-    return functionToCheck && (t === '[object Function]' || t === '[object AsyncFunction]');
+    return functionToCheck &&  (t === '[object Function]' || t === '[object AsyncFunction]');
 };
 const isElement=function(obj) {
     try {
@@ -364,12 +364,7 @@ const ForeachResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
     //debugger;
     let data = new Function("return "+bind+";").call(item);
     let targetName = item.getAttribute(":foreach").trim();
-    let last = item;
     let clone;
-    let i;
-    let j;
-    let key;
-    let attribute;
     let list;
     let hasId = item.hasAttribute("id");
     let id = null;
@@ -609,8 +604,8 @@ const inherit = function(item,map){
 
         rightKey = rightKey.replace(/\:\s*/,"");
         rightKey = rightKey === ''?"parent":["parent",rightKey].join(".");
+
         let tmp = new Function('parent','item',leftKey+'='+rightKey+';');
-        console.log(parent.data,item.data);
         tmp(parent,item);
     });
 };
@@ -849,10 +844,6 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     let getParentComponent = function(){
         let parent = item.parentNode;
         if(parent === null) return null;
-        let key = parent.tagName;
-        if(parent.hasAttribute(":extends")){
-            key = parent.getAttribute(":extends");
-        }
         while(true){
             if(parent.$isComponent){
                 return parent;
@@ -860,10 +851,6 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             if(parent.parentNode){
                 if(parent.parentNode === document) return null;
                 parent = parent.parentNode;
-                key = parent.tagName;
-                if(parent.hasAttribute(":extends")){
-                    key = parent.getAttribute(":extends");
-                }
             }else{
                 return null;
             }
@@ -886,6 +873,7 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     item.$isComponent = false;
     item.$dependents = new Array();
     item.$dataResolved=false;
+    
     item.$parent = item.getParentComponent();
     namespace = namespace !== null && namespace !== ""?namespace.split(/[\.\/]/):[];
     let extendsArray = null;
@@ -896,9 +884,14 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
     if(!item.data)
         item.data = {};
     if(item.$parent !== null){
-        item.$parent.$dependents.push(item);
         item.data.$parent = item.$parent.data;
     }
+
+    if(item.hasAttribute("asd") || item.hasAttribute("qwerty") || item.hasAttribute("zxc")){
+        console.log(item);
+        debugger;
+    }
+
     item.$el = item;
 
     let key = [...namespace,item.tagName];
@@ -915,7 +908,6 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
             item.data = await REQUEST.json();
         }
     }
-
     /*console.log(item);
     debugger;*/
     if(extendsArray !== null){
@@ -952,10 +944,6 @@ const ComponentResolver=async function(item,extra,useOldPointer=false){
 
     if(item.hasAttribute(":else") || item.hasAttribute(":elseif")){
         item.$masterCondition.$item.$dependents.push(item);
-    }
-
-    if(item.hasAttribute(":inherit") && item.$parent && item.$parent !== null){
-        item.data.$parent = item.$parent;
     }
 
     if(item.$onReady){
@@ -1016,24 +1004,23 @@ const VariableResolver=async function(item,extra,bind=COMPONENT_DATA_NAME){
             };
         }else{
             switch(attributes[i].name){
-                case ":inherit":
-                continue;
                 case ":extends":
                 case "@namespace":
                 case ":fetch":
-                continue;
+                    continue;
+                break;
                 case ":if":
                 case ":elseif":
                 case ":else":
                         new ConditionResolver(item);
-                continue;
+                    continue;
                 case ":foreach":
                         await ForeachResolver(item,extra);
-                continue;
+                    continue;
                 case ":sortby":
                 case ":desc":
                     //reserved attributes
-                continue;
+                    continue;
                 case ":html":
                     callback = function(result,state,isElement){
                         if(state === SUCCESS){
