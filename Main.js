@@ -1702,9 +1702,9 @@ include.template = include.templates;
 
 
 window.use = new Includer({
-    "templates":"/Template",
-    "js":"/js",
-    "css":"/css"
+    "templates":"Template",
+    "js":"js",
+    "css":"css"
 });
 const TEMPLATES = {};
 //window.template=use.template;
