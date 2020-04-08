@@ -1567,7 +1567,7 @@ const include={
         if(typeof list =="string")
         list = [list];
 
-        if(dir === "") dir = "/Template/";
+        if(dir === "") dir = "/";
         if(dir[dir.length-1] !== "/"){
             dir +="/";
         }
@@ -1577,12 +1577,14 @@ const include={
         if(length>0){
             for(let i = 0; i<length; i++){
                 let file = list[i];
-                let req,text
+                if(file[0] !== "/")
+                    file = dir + file;
+                let req,text;
                 if(!include.cache.templates[file]){
                     if(file.charAt(0)===":"){
-                        req = await fetch(dir+file.substr(1)+"?v="+version);
+                        req = await fetch(file.substr(1)+"?v="+version);
                     }else{
-                        req = await fetch(dir+file+".html?v="+version);
+                        req = await fetch(file+"?v="+version);
                     }
                     text = await req.text();
                     include.cache.templates[file] = text;
@@ -1608,7 +1610,7 @@ const include={
         if(typeof list === "string")
             list = [list];
     
-        if(dir === "") dir = "css/";
+        if(dir === "") dir = "/";
         if(dir[dir.length-1] !== "/"){
             dir +="/";
         }
@@ -1626,7 +1628,7 @@ const include={
                         if(file.match(/(^https?)|(^\/\/)/)){
                             text = await fetch(file);
                         }else{
-                            text = await fetch(dir+file+".css?v="+version);
+                            text = await fetch(dir+file+"?v="+version);
                         }
                         text = await text.text();
                         include.cache.css[file] = text;
@@ -1655,7 +1657,7 @@ const include={
         if(typeof list === "string")
             list = [list];
     
-        if(dir === "") dir = "js/";
+        if(dir === "") dir = "/";
         if(dir[dir.length-1] !== "/"){
             dir +="/";
         }
@@ -1702,9 +1704,9 @@ include.template = include.templates;
 
 
 window.use = new Includer({
-    "templates":"Template",
-    "js":"js",
-    "css":"css"
+    "templates":"",
+    "js":"",
+    "css":""
 });
 const TEMPLATES = {};
 //window.template=use.template;
